@@ -864,6 +864,23 @@ static void recfield (LexState *ls, ConsControl *cc) {
   fs->freereg = reg;  /* free registers */
 }
 
+static void body (LexState *ls, expdesc *e, int ismethod, int line);
+
+static void funcfield (LexState *ls, ConsControl *cc) {
+  /* funcfield -> FUNCTION funcname body */
+  FuncState *fs = ls->fs;
+  int reg = ls->fs->freereg;
+  expdesc tab, key, b;
+  luaX_next(ls);  /* skip FUNCTION */
+    checklimit(fs, cc->nh, MAX_INT, "items in a constructor");
+    codename(ls, &key);
+  cc->nh++;
+  tab = *cc->t;
+  luaK_indexed(fs, &tab, &key);
+  body(ls, &b, 1, ls->linenumber);
+  luaK_storevar(fs, &tab, &b);
+  fs->freereg = reg;  /* free registers */
+}
 
 static void closelistfield (FuncState *fs, ConsControl *cc) {
   if (cc->v.k == VVOID) return;  /* there is no list item */
@@ -912,6 +929,13 @@ static void field (LexState *ls, ConsControl *cc) {
     }
     case '[': {
       recfield(ls, cc);
+      break;
+    }
+    case TK_FUNCTION: {
+      if (luaX_lookahead(ls) != TK_NAME)  
+        listfield(ls, cc);
+      else
+        funcfield(ls, cc);
       break;
     }
     default: {
