@@ -43,7 +43,10 @@ static const char *const luaX_tokens [] = {
     "in", "local", "nil", "not", "or", "repeat",
     "return", "then", "true", "until", "while",
     "//", "..", "...", "==", ">=", "<=", "~=",
-    "<<", ">>", "::", "<eof>",
+    "<<", ">>",
+    "+=", "-=", "*=", "/=", "//=", "%=", "^=", "..=",
+    "|=", "&=", "~=", "<<=", ">>=", "||=", "&&=",
+    "::", "<eof>",
     "<number>", "<integer>", "<name>", "<string>"
 };
 
@@ -456,7 +459,10 @@ static int llex (LexState *ls, SemInfo *seminfo) {
       }
       case '-': {  /* '-' or '--' (comment) */
         next(ls);
-        if (ls->current != '-') return '-';
+        if (ls->current != '-') {
+        if (check_next1(ls, '=')) return TK_SUBAS;  /* '-=' */
+        else return '-';
+}
         /* else is a comment */
         next(ls);
         if (ls->current == '[') {  /* long comment? */
@@ -491,31 +497,84 @@ static int llex (LexState *ls, SemInfo *seminfo) {
       case '<': {
         next(ls);
         if (check_next1(ls, '=')) return TK_LE;  /* '<=' */
-        else if (check_next1(ls, '<')) return TK_SHL;  /* '<<' */
+        else if (check_next1(ls, '<')) {
+if (check_next1(ls, '=')) return TK_SHLAS; /* '<<=' */
+else return TK_SHL;  /* '<<' */
+}
         else return '<';
       }
       case '>': {
         next(ls);
         if (check_next1(ls, '=')) return TK_GE;  /* '>=' */
-        else if (check_next1(ls, '>')) return TK_SHR;  /* '>>' */
+        else if (check_next1(ls, '>')) {
+if (check_next1(ls, '=')) return TK_SHRAS; /* '>>=' */
+else return TK_SHR;  /* '>>' */
+}
         else return '>';
       }
       case '/': {
         next(ls);
-        if (check_next1(ls, '/')) return TK_IDIV;  /* '//' */
-        else return '/';
+        if (check_next1(ls, '/')) {
+if (check_next1(ls, '=')) return TK_IDIVAS; /* '//=' */
+else return TK_IDIV;  /* '//' */
+}
+        else if (check_next1(ls, '=')) return TK_DIVAS; /* '/=' */
+else return '/';
       }
       case '~': {
         next(ls);
         if (check_next1(ls, '=')) return TK_NE;  /* '~=' */
         else return '~';
       }
+      case '!': {
+        next(ls);
+        if (check_next1(ls, '=')) return TK_NE;  /* '!=' */
+        else return TK_NOT;
+      }
+      case '&': {
+        next(ls);
+        if (check_next1(ls, '&')) {
+if (check_next1(ls, '=')) return TK_ANDAS; /* '&&=' */
+else return TK_AND;  /* '&&' */
+}
+else if (check_next1(ls, '=')) return TK_BANDAS; /* '&=' */
+        else return '&';
+      }
+      case '|': {
+        next(ls);
+        if (check_next1(ls, '|')) {
+if (check_next1(ls, '=')) return TK_ORAS; /* '||=' */
+else return TK_OR;  /* '||' */
+}
+else if (check_next1(ls, '=')) return TK_BORAS; /* '|=' */
+        else return '|';
+      }
+      case '+': {
+        next(ls);
+        if (check_next1(ls, '=')) return TK_ADDAS;  /* '+=' */
+        else return '+';
+      }
+      case '*': {
+        next(ls);
+        if (check_next1(ls, '=')) return TK_MULAS;  /* '*=' */
+        else return '*';
+      }
+      case '%': {
+        next(ls);
+        if (check_next1(ls, '=')) return TK_MODAS;  /* '%=' */
+        else return '%';
+      }
+      case '^': {
+        next(ls);
+        if (check_next1(ls, '=')) return TK_POWAS;  /* '^=' */
+        else return '^';
+      }
       case ':': {
         next(ls);
         if (check_next1(ls, ':')) return TK_DBCOLON;  /* '::' */
         else return ':';
       }
-      case '"': case '\'': {  /* short literal strings */
+      case '"': case '\'': case '`': {  /* short literal strings */
         read_string(ls, ls->current, seminfo);
         return TK_STRING;
       }
@@ -524,6 +583,7 @@ static int llex (LexState *ls, SemInfo *seminfo) {
         if (check_next1(ls, '.')) {
           if (check_next1(ls, '.'))
             return TK_DOTS;   /* '...' */
+else if (check_next1(ls, '=')) return TK_CONCATAS; /* '..=' */
           else return TK_CONCAT;   /* '..' */
         }
         else if (!lisdigit(ls->current)) return '.';
