@@ -954,18 +954,35 @@ static void setvararg (FuncState *fs, int nparams) {
   luaK_codeABC(fs, OP_VARARGPREP, nparams, 0, 0);
 }
 
+static void pardefault (LexState* ls, int paridx, TString* parname) {
+expdesc p, e;
+int jf;
+  init_exp(&p, VLOCAL, 0);
+p.u.var.ridx = paridx;
+luaK_code(ls->fs, CREATE_ABCk(OP_TEST, paridx, 63, 31, 1));
+jf = luaK_code(ls->fs, CREATE_sJ(OP_JMP, OFFSET_sJ, 0));
+//int o = ls->fs->freereg;
+//ls->fs->freereg = 100;
+expr(ls, &e);
+      luaK_storevar(ls->fs, &p, &e);
+//ls->fs->freereg = o;
+SETARG_sJ(ls->fs->f->code[jf], ls->fs->pc -jf -1);
+}
 
 static void parlist (LexState *ls) {
   /* parlist -> [ {NAME ','} (NAME | '...') ] */
   FuncState *fs = ls->fs;
   Proto *f = fs->f;
+TString* parname;
   int nparams = 0;
   int isvararg = 0;
   if (ls->t.token != ')') {  /* is 'parlist' not empty? */
     do {
       switch (ls->t.token) {
         case TK_NAME: {
-          new_localvar(ls, str_checkname(ls));
+parname = str_checkname(ls);
+          new_localvar(ls, parname);
+if (testnext(ls, '=')) pardefault(ls, nparams, parname);
           nparams++;
           break;
         }
