@@ -956,13 +956,16 @@ static void setvararg (FuncState *fs, int nparams) {
 }
 
 
-static void parlist (LexState *ls) {
+static void parlist (LexState *ls, int parens) {
   /* parlist -> [ {NAME ','} (NAME | '...') ] */
   FuncState *fs = ls->fs;
   Proto *f = fs->f;
   int nparams = 0;
   int isvararg = 0;
-  if (ls->t.token != ')') {  /* is 'parlist' not empty? */
+  if (
+    (parens && ls->t.token != ')') 
+    || (!parens && ls->t.token != TK_RARROW && ls->t.token != '{')
+  ) {  /* is 'parlist' not empty? */
     do {
       switch (ls->t.token) {
         case TK_NAME: {
@@ -986,22 +989,25 @@ static void parlist (LexState *ls) {
   luaK_reserveregs(fs, fs->nactvar);  /* reserve registers for parameters */
 }
 
+static void singleretstat (LexState* ls);
 
 static void body (LexState *ls, expdesc *e, int ismethod, int line) {
   /* body ->  '(' parlist ')' block END */
   FuncState new_fs;
   BlockCnt bl;
+  int parens;
   new_fs.f = addprototype(ls);
   new_fs.f->linedefined = line;
   open_func(ls, &new_fs, &bl);
-  checknext(ls, '(');
+  parens = testnext(ls, '(');
   if (ismethod) {
     new_localvarliteral(ls, "self");  /* create 'self' parameter */
     adjustlocalvars(ls, 1);
   }
-  parlist(ls);
-  checknext(ls, ')');
-  statlist(ls);
+  parlist(ls, parens);
+  if (parens) checknext(ls, ')');
+  if (testnext(ls, TK_RARROW)) singleretstat(ls);
+  else statlist(ls);
   new_fs.f->lastlinedefined = ls->linenumber;
   check_match(ls, TK_END, TK_FUNCTION, line);
   codeclosure(ls, e);
@@ -1839,6 +1845,14 @@ static void retstat (LexState *ls) {
   }
   luaK_ret(fs, first, nret);
   testnext(ls, ';');  /* skip optional semicolon */
+}
+
+static void singleretstat (LexState* ls) {
+expdesc e;
+expr(ls, &e);
+  int first = luaY_nvarstack(ls->fs);  /* first slot to be returned */
+        first = luaK_exp2anyreg(ls->fs, &e);  /* can use original slot */
+  luaK_ret(ls->fs, first, 1);
 }
 
 
