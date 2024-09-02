@@ -954,35 +954,62 @@ static void setvararg (FuncState *fs, int nparams) {
   luaK_codeABC(fs, OP_VARARGPREP, nparams, 0, 0);
 }
 
-static void pardefault (LexState* ls, int paridx, TString* parname) {
+static void pardefault (LexState* ls, int paridx, int regdelta) {
 expdesc p, e;
 int jf;
   init_exp(&p, VLOCAL, 0);
 p.u.var.ridx = paridx;
 luaK_code(ls->fs, CREATE_ABCk(OP_TEST, paridx, 63, 31, 1));
 jf = luaK_code(ls->fs, CREATE_sJ(OP_JMP, OFFSET_sJ, 0));
-//int o = ls->fs->freereg;
-//ls->fs->freereg = 100;
+int o = ls->fs->freereg;
+ls->fs->freereg = regdelta;
 expr(ls, &e);
       luaK_storevar(ls->fs, &p, &e);
-//ls->fs->freereg = o;
+ls->fs->freereg = o;
 SETARG_sJ(ls->fs->f->code[jf], ls->fs->pc -jf -1);
+}
+
+static void patchpardefaults (FuncState* fs, int regdelta, int regstart) {
+int x;
+for (Instruction* inst = fs->f->code; inst<fs->f->code+fs->pc; inst++) {
+#define OP(X) x = GETARG_##X(*inst); if (x>=regdelta) SETARG_##X(*inst, x-regdelta+regstart);
+switch(GET_OPCODE(*inst)) {
+case OP_GETTABLE: case OP_SETTABLE: case OP_SELF: case OP_ADD: case OP_SUB: case OP_MUL: case OP_DIV: case OP_IDIV: case OP_MOD: case OP_BAND: case OP_BOR: case OP_BXOR: case OP_SHR: case OP_SHL: case OP_POW:
+OP(C)
+case OP_MOVE: case OP_GETI: case OP_GETFIELD:
+case OP_ADDI: case OP_ADDK: case OP_SUBK: case OP_MULK: case OP_DIVK: case OP_IDIVK: case OP_MODK: case OP_POWK: case OP_BANDK: case OP_BORK: case OP_BXORK: case OP_SHRI: case OP_SHLI:
+case OP_MMBIN: case OP_UNM: case OP_NOT: case OP_BNOT: case OP_LEN:
+case OP_EQ: case OP_LT: case OP_LE: case OP_TESTSET: 
+OP(B)
+case OP_LOADI: case OP_LOADF: case OP_LOADK: case OP_LOADKX: case OP_LOADFALSE: case OP_LFALSESKIP: case OP_LOADTRUE: case OP_LOADNIL: 
+case OP_GETUPVAL: case OP_SETUPVAL: case OP_GETTABUP: case OP_SETTABUP: case OP_NEWTABLE: 
+case OP_MMBINI: case OP_MMBINK: case OP_CONCAT: case OP_CLOSE: case OP_TBC: case OP_EQK: case OP_EQI: case OP_LTI: case OP_LEI: case OP_GTI: case OP_GEI: case OP_TEST: 
+case OP_CALL: case OP_TAILCALL: case OP_RETURN: case OP_RETURN1: case OP_SETLIST:
+OP(A)
+break;
+case OP_SETFIELD: case OP_SETI:
+OP(A) OP(C)
+break;
+default:
+break;
+}
+#undef OP
+}
 }
 
 static void parlist (LexState *ls) {
   /* parlist -> [ {NAME ','} (NAME | '...') ] */
   FuncState *fs = ls->fs;
   Proto *f = fs->f;
-TString* parname;
   int nparams = 0;
   int isvararg = 0;
   if (ls->t.token != ')') {  /* is 'parlist' not empty? */
     do {
       switch (ls->t.token) {
         case TK_NAME: {
-parname = str_checkname(ls);
-          new_localvar(ls, parname);
-if (testnext(ls, '=')) pardefault(ls, nparams, parname);
+          new_localvar(ls, str_checkname(ls));
+  adjustlocalvars(ls, 1);
+if (testnext(ls, '=')) pardefault(ls, nparams, 128);
           nparams++;
           break;
         }
@@ -995,7 +1022,7 @@ if (testnext(ls, '=')) pardefault(ls, nparams, parname);
       }
     } while (!isvararg && testnext(ls, ','));
   }
-  adjustlocalvars(ls, nparams);
+  patchpardefaults(fs, 128, nparams);
   f->numparams = cast_byte(fs->nactvar);
   if (isvararg)
     setvararg(fs, f->numparams);  /* declared vararg */
