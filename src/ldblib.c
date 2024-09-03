@@ -61,6 +61,23 @@ static int db_setmetatable (lua_State *L) {
   return 1;  /* return 1st argument */
 }
 
+static int db_gettypemetatable (lua_State *L) {
+  luaL_checkany(L, 1);
+  if (!lua_gettypemetatable(L, lua_type(L, 1))) {
+    lua_pushnil(L);  /* no metatable */
+  }
+  return 1;
+}
+
+
+static int db_settypemetatable (lua_State *L) {
+  int t = lua_type(L, 2);
+  luaL_argexpected(L, t == LUA_TNIL || t == LUA_TTABLE, 2, "nil or table");
+  lua_settop(L, 2);
+  lua_settypemetatable(L, lua_type(L, 1));
+  return 1;  /* return 1st argument */
+}
+
 
 static int db_getuservalue (lua_State *L) {
   int n = (int)luaL_optinteger(L, 2, 1);
@@ -462,6 +479,7 @@ static const luaL_Reg dblib[] = {
   {"getlocal", db_getlocal},
   {"getregistry", db_getregistry},
   {"getmetatable", db_getmetatable},
+  {"gettypemetatable", db_gettypemetatable},
   {"getupvalue", db_getupvalue},
   {"upvaluejoin", db_upvaluejoin},
   {"upvalueid", db_upvalueid},
@@ -469,6 +487,7 @@ static const luaL_Reg dblib[] = {
   {"sethook", db_sethook},
   {"setlocal", db_setlocal},
   {"setmetatable", db_setmetatable},
+  {"settypemetatable", db_settypemetatable},
   {"setupvalue", db_setupvalue},
   {"traceback", db_traceback},
   {"setcstacklimit", db_setcstacklimit},
