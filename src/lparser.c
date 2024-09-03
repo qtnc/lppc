@@ -959,13 +959,12 @@ expdesc p, e;
 int jf;
   init_exp(&p, VLOCAL, 0);
 p.u.var.ridx = paridx;
-luaK_code(ls->fs, CREATE_ABCk(OP_TEST, paridx, 63, 31, 1));
+luaK_code(ls->fs, CREATE_ABCk(OP_TEST, paridx, 0, 0, 1));
 jf = luaK_code(ls->fs, CREATE_sJ(OP_JMP, OFFSET_sJ, 0));
-int o = ls->fs->freereg;
 ls->fs->freereg = regdelta;
 expr(ls, &e);
       luaK_storevar(ls->fs, &p, &e);
-ls->fs->freereg = o;
+ls->fs->freereg = 0;
 SETARG_sJ(ls->fs->f->code[jf], ls->fs->pc -jf -1);
 }
 
@@ -995,6 +994,7 @@ break;
 }
 #undef OP
 }
+if (fs->f->maxstacksize>=regdelta) fs->f->maxstacksize-=regdelta;
 }
 
 static void parlist (LexState *ls) {
