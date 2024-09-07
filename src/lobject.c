@@ -282,13 +282,24 @@ static const char *l_str2int (const char *s, lua_Integer *result) {
   if (s[0] == '0' &&
       (s[1] == 'x' || s[1] == 'X')) {  /* hex? */
     s += 2;  /* skip '0x' */
-    for (; lisxdigit(cast_uchar(*s)); s++) {
+    for (; lisxdigit(cast_uchar(*s)) || *s == '_'; s++) {
+      if (*s == '_') continue;
       a = a * 16 + luaO_hexavalue(*s);
       empty = 0;
     }
   }
+  else if (s[0] == '0' &&
+      (s[1] == 'b' || s[1] == 'B')) {  /* binary? */
+    s += 2;  /* skip '0x' */
+    for (; *s == '0' || *s == '1' || *s == '_'; s++) {
+      if (*s == '_') continue;
+      a = a * 2 + (*s - '0');
+      empty = 0;
+    }
+  }
   else {  /* decimal */
-    for (; lisdigit(cast_uchar(*s)); s++) {
+    for (; lisdigit(cast_uchar(*s)) || *s=='_'; s++) {
+      if (*s == '_') continue;
       int d = *s - '0';
       if (a >= MAXBY10 && (a > MAXBY10 || d > MAXLASTD + neg))  /* overflow? */
         return NULL;  /* do not accept it (as integer) */
