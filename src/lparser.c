@@ -1142,6 +1142,16 @@ static void suffixedexp (LexState *ls, expdesc *v) {
   }
 }
 
+static int testlambdadecl (LexState* ls) {
+int tk = luaX_lookahead(ls);
+  if (tk == ')') return 1;
+  else if (tk != TK_NAME) return 0;
+  tk = luaX_lookahead(ls);
+  if (tk == ',') return 1;
+  else if (tk != ')') return 0;
+  tk = luaX_lookahead(ls);
+  return tk == TK_RARROW;
+}
 
 static void simpleexp (LexState *ls, expdesc *v) {
   /* simpleexp -> FLT | INT | STRING | NIL | TRUE | FALSE | ... |
@@ -1189,8 +1199,19 @@ static void simpleexp (LexState *ls, expdesc *v) {
       body(ls, v, 0, ls->linenumber);
       return;
     }
+    case TK_RARROW: {
+      body(ls, v, 0, ls->linenumber);
+      return;
+    }
     case TK_NAME: {
       if (luaX_lookahead(ls) == TK_RARROW)
+        body(ls, v, 0, ls->linenumber);
+      else
+        suffixedexp(ls, v);
+      return;
+    }
+    case '(': {
+      if (testlambdadecl(ls)) 
         body(ls, v, 0, ls->linenumber);
       else
         suffixedexp(ls, v);
