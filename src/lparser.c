@@ -1877,10 +1877,17 @@ static void retstat (LexState *ls) {
 
 static void singleretstat (LexState* ls) {
 expdesc e;
+int line = ls->linenumber;
+if (testnext(ls, '(')) {
+retstat(ls);
+check_match(ls, ')', '(', line);
+}
+else {
 expr(ls, &e);
   int first = luaY_nvarstack(ls->fs);  /* first slot to be returned */
         first = luaK_exp2anyreg(ls->fs, &e);  /* can use original slot */
   luaK_ret(ls->fs, first, 1);
+}
 }
 
 
