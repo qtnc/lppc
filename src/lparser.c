@@ -1006,10 +1006,14 @@ static void body (LexState *ls, expdesc *e, int ismethod, int line) {
   }
   parlist(ls, parens);
   if (parens) checknext(ls, ')');
-  if (testnext(ls, TK_RARROW)) singleretstat(ls);
-  else statlist(ls);
-  new_fs.f->lastlinedefined = ls->linenumber;
-  check_match(ls, TK_END, TK_FUNCTION, line);
+  if (testnext(ls, TK_RARROW)) {
+    singleretstat(ls);
+   new_fs.f->lastlinedefined = ls->linenumber;
+  } else {
+    statlist(ls);
+    new_fs.f->lastlinedefined = ls->linenumber;
+    check_match(ls, TK_END, TK_FUNCTION, line);
+  }
   codeclosure(ls, e);
   close_func(ls);
 }
