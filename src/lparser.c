@@ -866,7 +866,7 @@ static void recfield (LexState *ls, ConsControl *cc) {
 
 static void body (LexState *ls, expdesc *e, int ismethod, int line);
 
-static void funcfield (LexState *ls, ConsControl *cc) {
+static int funcfield (LexState *ls, ConsControl *cc) {
   /* funcfield -> FUNCTION funcname body */
   FuncState *fs = ls->fs;
   int reg = ls->fs->freereg;
@@ -880,6 +880,7 @@ static void funcfield (LexState *ls, ConsControl *cc) {
   body(ls, &b, 1, ls->linenumber);
   luaK_storevar(fs, &tab, &b);
   fs->freereg = reg;  /* free registers */
+  return 1;
 }
 
 static void closelistfield (FuncState *fs, ConsControl *cc) {
@@ -917,8 +918,9 @@ static void listfield (LexState *ls, ConsControl *cc) {
 }
 
 
-static void field (LexState *ls, ConsControl *cc) {
+static int field (LexState *ls, ConsControl *cc) {
   /* field -> listfield | recfield */
+  int nocomma = 0;
   switch(ls->t.token) {
     case TK_NAME: {  /* may be 'listfield' or 'recfield' */
       if (luaX_lookahead(ls) != '=')  /* expression? */
@@ -935,7 +937,7 @@ static void field (LexState *ls, ConsControl *cc) {
       if (luaX_lookahead(ls) != TK_NAME)  
         listfield(ls, cc);
       else
-        funcfield(ls, cc);
+        nocomma = funcfield(ls, cc);
       break;
     }
     default: {
@@ -943,6 +945,7 @@ static void field (LexState *ls, ConsControl *cc) {
       break;
     }
   }
+  return nocomma;
 }
 
 
@@ -952,6 +955,7 @@ static void constructor (LexState *ls, expdesc *t) {
   FuncState *fs = ls->fs;
   int line = ls->linenumber;
   int pc = luaK_codeABC(fs, OP_NEWTABLE, 0, 0, 0);
+  int nocomma = 0;
   ConsControl cc;
   luaK_code(fs, 0);  /* space for extra arg. */
   cc.na = cc.nh = cc.tostore = 0;
@@ -964,8 +968,8 @@ static void constructor (LexState *ls, expdesc *t) {
     lua_assert(cc.v.k == VVOID || cc.tostore > 0);
     if (ls->t.token == '}') break;
     closelistfield(fs, &cc);
-    field(ls, &cc);
-  } while (testnext(ls, ',') || testnext(ls, ';'));
+    nocomma = field(ls, &cc);
+  } while (testnext(ls, ',') || testnext(ls, ';') || nocomma);
   check_match(ls, '}', '{', line);
   lastlistfield(fs, &cc);
   luaK_settablesize(fs, pc, t->u.info, cc.na, cc.nh);
