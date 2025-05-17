@@ -1,0 +1,266 @@
+diff --git a/readme.md b/readme.md
+index 760cb2d..af8bfc9 100644
+--- a/readme.md
++++ b/readme.md
+@@ -19,6 +19,8 @@ Applying a patch is very easy:
+ ### Compound operators
+ Branch: compound-operators
+ 
++Download [compound-operators.patch] 
++
+ This patch adds the popular compound operators so well known and beloved in most other languages, that lua doesn't include by default.
+ 
+ - Add `+=, -=, *=, /=, //=, %=, ^=, |=, &=, <<=, >>=, ..=`
+@@ -41,6 +43,8 @@ print(t.u.v) -- 500
+ ### Lambdas
+ Branch: lambdas
+ 
++Download [lambdas.patch] ( 4 files changed, 89 insertions(+), 12 deletions(-))
++
+ This patch adds the support for shorter function syntax as known as lambdas, as it exists in other languages such as JavaScript, Java and Python.
+ JavaScript's syntax with `=>` has been retained.
+ 
+@@ -67,6 +71,8 @@ printcall( (a, b) => (b, a), 'one', 'two') -- two one
+ ## Table extraction in local variables
+ Branch: table-extract
+ 
++Download [table-extract.patch] ( 3 files changed, 39 insertions(+), 1 deletion(-))
++
+ This patch brings a little syntax suggar to extract multiple table fields into local variables at once.
+ 
+ - Add the syntax `local a, b, ... in expr `
+@@ -80,6 +86,8 @@ print(log(64, 2), floor(17.25), cos(0)) -- 6.0 17 1.0
+ ### Syntax suggar for defining methods in tables
+ Branch: methods-in-tables
+ 
++Download [methods-in-tables.patch] ( 2 files changed, 45 insertions(+), 3 deletions(-))
++
+ This patch brings a little syntax suggar to define methods in tables.
+ 
+ - Add method syntax in table (see below)
+@@ -110,6 +118,8 @@ print(mybank.balance) -- 1000
+ ### Better numbers
+ Branch: better-numbers
+ 
++Download [better-numbers.patch] ( 3 files changed, 29 insertions(+), 4 deletions(-))
++
+ This simple patch allows binary literals with 0b and thousend separators in  literals for better readability.
+ 
+ - Add underscore `_` thousend separator syntax in the code, e.g. `1_234_567` inspired by Java and JavaScript
+@@ -126,6 +136,8 @@ print(a+b) 1234575
+ ### Default type metatable
+ Branch: default-type-mt
+ 
++Download [default-type-mt.patch] ( 4 files changed, 66 insertions(+), 1 deletion(-))
++
+ You can call functions of the string table as methods without the need to do anything, because the type string has a shared metatable allowing it.
+ Why don't tables do the same and allow to call table.insert, table.remove, table.sort, etc. as methods as well ?
+ 
+@@ -150,6 +162,8 @@ print(t:concat(';')) -- 1;2;3;4;5
+ ### Stared expand in table constructor
+ Branch: star-expand
+ 
++Download [star-expand.patch] ( 4 files changed, 33 insertions(+), 9 deletions(-))
++
+ Well known by pythonists, this patch brings the unary `*` operator to lua, but it works only in table constructor to expand multiple arguments returned by a function. It's far from what Python allows, but better than nothing.
+ 
+ ```lua
+diff --git a/src/llex.c b/src/llex.c
+index 5fc39a5..ac79c27 100644
+--- a/src/llex.c
++++ b/src/llex.c
+@@ -42,6 +42,7 @@ static const char *const luaX_tokens [] = {
+     "end", "false", "for", "function", "goto", "if",
+     "in", "local", "nil", "not", "or", "repeat",
+     "return", "then", "true", "until", "while",
++    "=>", 
+     "//", "..", "...", "==", ">=", "<=", "~=",
+     "<<", ">>", "::", "<eof>",
+     "<number>", "<integer>", "<name>", "<string>"
+@@ -170,6 +171,8 @@ void luaX_setinput (lua_State *L, LexState *ls, ZIO *z, TString *source,
+   ls->L = L;
+   ls->current = firstchar;
+   ls->lookahead.token = TK_EOS;  /* no look-ahead token */
++  ls->lookahead2.token = TK_EOS;  /* no look-ahead token */
++  ls->lookahead3.token = TK_EOS;  /* no look-ahead token */
+   ls->z = z;
+   ls->fs = NULL;
+   ls->linenumber = 1;
+@@ -486,6 +489,7 @@ static int llex (LexState *ls, SemInfo *seminfo) {
+       case '=': {
+         next(ls);
+         if (check_next1(ls, '=')) return TK_EQ;  /* '==' */
++        else if (check_next1(ls, '>')) return TK_RARROW;  /* '=>' */
+         else return '=';
+       }
+       case '<': {
+@@ -566,7 +570,9 @@ void luaX_next (LexState *ls) {
+   ls->lastline = ls->linenumber;
+   if (ls->lookahead.token != TK_EOS) {  /* is there a look-ahead token? */
+     ls->t = ls->lookahead;  /* use this one */
+-    ls->lookahead.token = TK_EOS;  /* and discharge it */
++    ls->lookahead = ls->lookahead2;
++    ls->lookahead2 = ls->lookahead3;
++    ls->lookahead3.token = TK_EOS;  /* and discharge it */
+   }
+   else
+     ls->t.token = llex(ls, &ls->t.seminfo);  /* read next token */
+@@ -574,8 +580,9 @@ void luaX_next (LexState *ls) {
+ 
+ 
+ int luaX_lookahead (LexState *ls) {
+-  lua_assert(ls->lookahead.token == TK_EOS);
+-  ls->lookahead.token = llex(ls, &ls->lookahead.seminfo);
+-  return ls->lookahead.token;
++  lua_assert(ls->lookahead3.token == TK_EOS);
++  Token* t = ls->lookahead.token == TK_EOS ? &ls->lookahead : (ls->lookahead2.token == TK_EOS? &ls->lookahead2 : &ls->lookahead3);
++  t->token = llex(ls, &t->seminfo);
++  return t->token;
+ }
+ 
+diff --git a/src/llex.h b/src/llex.h
+index 389d2f8..66dd9b8 100644
+--- a/src/llex.h
++++ b/src/llex.h
+@@ -36,6 +36,7 @@ enum RESERVED {
+   TK_GOTO, TK_IF, TK_IN, TK_LOCAL, TK_NIL, TK_NOT, TK_OR, TK_REPEAT,
+   TK_RETURN, TK_THEN, TK_TRUE, TK_UNTIL, TK_WHILE,
+   /* other terminal symbols */
++  TK_RARROW,
+   TK_IDIV, TK_CONCAT, TK_DOTS, TK_EQ, TK_GE, TK_LE, TK_NE,
+   TK_SHL, TK_SHR,
+   TK_DBCOLON, TK_EOS,
+@@ -67,6 +68,8 @@ typedef struct LexState {
+   int lastline;  /* line of last token 'consumed' */
+   Token t;  /* current token */
+   Token lookahead;  /* look ahead token */
++  Token lookahead2;  /* look ahead token */
++  Token lookahead3;  /* look ahead token */
+   struct FuncState *fs;  /* current function (parser) */
+   struct lua_State *L;
+   ZIO *z;  /* input stream */
+diff --git a/src/lparser.c b/src/lparser.c
+index 2b888c7..38fe2a7 100644
+--- a/src/lparser.c
++++ b/src/lparser.c
+@@ -956,13 +956,16 @@ static void setvararg (FuncState *fs, int nparams) {
+ }
+ 
+ 
+-static void parlist (LexState *ls) {
++static void parlist (LexState *ls, int parens) {
+   /* parlist -> [ {NAME ','} (NAME | '...') ] */
+   FuncState *fs = ls->fs;
+   Proto *f = fs->f;
+   int nparams = 0;
+   int isvararg = 0;
+-  if (ls->t.token != ')') {  /* is 'parlist' not empty? */
++  if (
++    (parens && ls->t.token != ')') 
++    || (!parens && ls->t.token != TK_RARROW && ls->t.token != '{')
++  ) {  /* is 'parlist' not empty? */
+     do {
+       switch (ls->t.token) {
+         case TK_NAME: {
+@@ -986,24 +989,31 @@ static void parlist (LexState *ls) {
+   luaK_reserveregs(fs, fs->nactvar);  /* reserve registers for parameters */
+ }
+ 
++static void singleretstat (LexState* ls);
+ 
+ static void body (LexState *ls, expdesc *e, int ismethod, int line) {
+   /* body ->  '(' parlist ')' block END */
+   FuncState new_fs;
+   BlockCnt bl;
++  int parens;
+   new_fs.f = addprototype(ls);
+   new_fs.f->linedefined = line;
+   open_func(ls, &new_fs, &bl);
+-  checknext(ls, '(');
++  parens = testnext(ls, '(');
+   if (ismethod) {
+     new_localvarliteral(ls, "self");  /* create 'self' parameter */
+     adjustlocalvars(ls, 1);
+   }
+-  parlist(ls);
+-  checknext(ls, ')');
+-  statlist(ls);
+-  new_fs.f->lastlinedefined = ls->linenumber;
+-  check_match(ls, TK_END, TK_FUNCTION, line);
++  parlist(ls, parens);
++  if (parens) checknext(ls, ')');
++  if (testnext(ls, TK_RARROW)) {
++    singleretstat(ls);
++   new_fs.f->lastlinedefined = ls->linenumber;
++  } else {
++    statlist(ls);
++    new_fs.f->lastlinedefined = ls->linenumber;
++    check_match(ls, TK_END, TK_FUNCTION, line);
++  }
+   codeclosure(ls, e);
+   close_func(ls);
+ }
+@@ -1136,6 +1146,16 @@ static void suffixedexp (LexState *ls, expdesc *v) {
+   }
+ }
+ 
++static int testlambdadecl (LexState* ls) {
++int tk = luaX_lookahead(ls);
++  if (tk == ')') return 1;
++  else if (tk != TK_NAME) return 0;
++  tk = luaX_lookahead(ls);
++  if (tk == ',') return 1;
++  else if (tk != ')') return 0;
++  tk = luaX_lookahead(ls);
++  return tk == TK_RARROW;
++}
+ 
+ static void simpleexp (LexState *ls, expdesc *v) {
+   /* simpleexp -> FLT | INT | STRING | NIL | TRUE | FALSE | ... |
+@@ -1183,6 +1203,24 @@ static void simpleexp (LexState *ls, expdesc *v) {
+       body(ls, v, 0, ls->linenumber);
+       return;
+     }
++    case TK_RARROW: {
++      body(ls, v, 0, ls->linenumber);
++      return;
++    }
++    case TK_NAME: {
++      if (luaX_lookahead(ls) == TK_RARROW)
++        body(ls, v, 0, ls->linenumber);
++      else
++        suffixedexp(ls, v);
++      return;
++    }
++    case '(': {
++      if (testlambdadecl(ls)) 
++        body(ls, v, 0, ls->linenumber);
++      else
++        suffixedexp(ls, v);
++      return;
++    }
+     default: {
+       suffixedexp(ls, v);
+       return;
+@@ -1841,6 +1879,21 @@ static void retstat (LexState *ls) {
+   testnext(ls, ';');  /* skip optional semicolon */
+ }
+ 
++static void singleretstat (LexState* ls) {
++expdesc e;
++int line = ls->linenumber;
++if (testnext(ls, '(')) {
++retstat(ls);
++check_match(ls, ')', '(', line);
++}
++else {
++expr(ls, &e);
++  int first = luaY_nvarstack(ls->fs);  /* first slot to be returned */
++        first = luaK_exp2anyreg(ls->fs, &e);  /* can use original slot */
++  luaK_ret(ls->fs, first, 1);
++}
++}
++
+ 
+ static void statement (LexState *ls) {
+   int line = ls->linenumber;  /* may be needed for error messages */
