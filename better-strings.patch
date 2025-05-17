@@ -1,0 +1,57 @@
+diff --git a/src/lctype.c b/src/lctype.c
+index 9542280..812a938 100644
+--- a/src/lctype.c
++++ b/src/lctype.c
+@@ -17,6 +17,7 @@
+ #include <limits.h>
+ 
+ 
++#define LUA_UCID 1
+ #if defined (LUA_UCID)		/* accept UniCode IDentifiers? */
+ /* consider all non-ascii codepoints to be alphabetic */
+ #define NONA		0x01
+diff --git a/src/llex.c b/src/llex.c
+index 5fc39a5..bb66478 100644
+--- a/src/llex.c
++++ b/src/llex.c
+@@ -388,14 +388,16 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
+         break;  /* to avoid warnings */
+       case '\n':
+       case '\r':
+-        lexerror(ls, "unfinished string", TK_STRING);
+-        break;  /* to avoid warnings */
++inclinenumber(ls);
++        save(ls, '\n');
++        break;
+       case '\\': {  /* escape sequences */
+         int c;  /* final character to be saved */
+         save_and_next(ls);  /* keep '\\' for error messages */
+         switch (ls->current) {
+           case 'a': c = '\a'; goto read_save;
+           case 'b': c = '\b'; goto read_save;
++          case 'e': c = '\x1b'; goto read_save;
+           case 'f': c = '\f'; goto read_save;
+           case 'n': c = '\n'; goto read_save;
+           case 'r': c = '\r'; goto read_save;
+@@ -404,8 +406,10 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
+           case 'x': c = readhexaesc(ls); goto read_save;
+           case 'u': utf8esc(ls);  goto no_save;
+           case '\n': case '\r':
+-            inclinenumber(ls); c = '\n'; goto only_save;
+-          case '\\': case '\"': case '\'':
++            inclinenumber(ls);          
++            luaZ_buffremove(ls->buff, 1);  /* remove '\\' */
++            goto no_save;
++          case '\\': case '\"': case '\'': case '`':
+             c = ls->current; goto read_save;
+           case EOZ: goto no_save;  /* will raise an error next loop */
+           case 'z': {  /* zap following span of spaces */
+@@ -515,7 +519,7 @@ static int llex (LexState *ls, SemInfo *seminfo) {
+         if (check_next1(ls, ':')) return TK_DBCOLON;  /* '::' */
+         else return ':';
+       }
+-      case '"': case '\'': {  /* short literal strings */
++      case '"': case '\'': case '`': {  /* short literal strings */
+         read_string(ls, ls->current, seminfo);
+         return TK_STRING;
+       }
