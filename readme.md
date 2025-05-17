@@ -18,7 +18,7 @@ A power patch usually changes core language features otherwise impossible to do 
 ### Compound operators
 Branch: compound-operators
 
-Download [compound-operators.patch] ( 10 files changed, 122 insertions(+), 1284 deletions(-))
+Download [compound-operators.patch] ( 3 files changed, 122 insertions(+), 7 deletions(-))
 
 This patch adds the popular compound operators so well known and beloved in most other languages, that lua doesn't include by default.
 
