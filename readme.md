@@ -18,7 +18,7 @@ A power patch usually changes core language features otherwise impossible to do 
 ### Compound operators
 Branch: compound-operators
 
-Download [compound-operators.patch] ( 3 files changed, 122 insertions(+), 7 deletions(-))
+Download [compound-operators.patch](compound-operators.patch) ( 3 files changed, 122 insertions(+), 7 deletions(-))
 
 This patch adds the popular compound operators so well known and beloved in most other languages, that lua doesn't include by default.
 
@@ -42,7 +42,7 @@ print(t.u.v) -- 500
 ### Lambdas
 Branch: lambdas
 
-Download [lambdas.patch] ( 3 files changed, 75 insertions(+), 12 deletions(-))
+Download [lambdas.patch](lambdas.patch) ( 3 files changed, 75 insertions(+), 12 deletions(-))
 
 This patch adds the support for shorter function syntax as known as lambdas, as it exists in other languages such as JavaScript, Java and Python.
 JavaScript's syntax with `=>` has been retained.
@@ -70,7 +70,7 @@ printcall( (a, b) => (b, a), 'one', 'two') -- two one
 ## Table extraction in local variables
 Branch: table-extract
 
-Download [table-extract.patch] ( 2 files changed, 25 insertions(+), 1 deletion(-))
+Download [table-extract.patch](table-extract.patch) ( 2 files changed, 25 insertions(+), 1 deletion(-))
 
 This patch brings a little syntax suggar to extract multiple table fields into local variables at once.
 
@@ -85,7 +85,7 @@ print(log(64, 2), floor(17.25), cos(0)) -- 6.0 17 1.0
 ### Syntax suggar for defining methods in tables
 Branch: methods-in-tables
 
-Download [methods-in-tables.patch] ( 1 file changed, 31 insertions(+), 3 deletions(-))
+Download [methods-in-tables.patch](methods-in-tables.patch) ( 1 file changed, 31 insertions(+), 3 deletions(-))
 
 This patch brings a little syntax suggar to define methods in tables.
 
@@ -117,7 +117,7 @@ print(mybank.balance) -- 1000
 ### Better numbers
 Branch: better-numbers
 
-Download [better-numbers.patch] ( 2 files changed, 15 insertions(+), 4 deletions(-))
+Download [better-numbers.patch](better-numbers.patch) ( 2 files changed, 15 insertions(+), 4 deletions(-))
 
 This simple patch allows binary literals with 0b and thousend separators in  literals for better readability.
 
@@ -131,11 +131,22 @@ local b = 1_234_567
 print(a+b) 1234575
 ```
 
+### Better strings
+Branch: better-strings
+
+Download [better-strings.patch](better-strings.patch) 
+
+This very small patch adds some string improvements:
+
+- Added backtick `\``  as another possible string delimiter along with `'` and `"`
+- Support for multiline short strings
+- Added `\e` for escape, equivalent to `\x1b`
+- Added `\\` followed by a newline to ignore it
 
 ### Default type metatable
 Branch: default-type-mt
 
-Download [default-type-mt.patch] ( 3 files changed, 52 insertions(+), 1 deletion(-))
+Download [default-type-mt.patch](default-type-mt.patch) ( 3 files changed, 52 insertions(+), 1 deletion(-))
 
 You can call functions of the string table as methods without the need to do anything, because the type string has a shared metatable allowing it.
 Why don't tables do the same and allow to call table.insert, table.remove, table.sort, etc. as methods as well ?
@@ -161,7 +172,7 @@ print(t:concat(';')) -- 1;2;3;4;5
 ### Stared expand in table constructor
 Branch: star-expand
 
-Download [star-expand.patch] ( 3 files changed, 19 insertions(+), 9 deletions(-))
+Download [star-expand.patch](star-expand.patch) ( 3 files changed, 19 insertions(+), 9 deletions(-))
 
 Well known by pythonists, this patch brings the unary `*` operator to lua, but it works only in table constructor to expand multiple arguments returned by a function. It's far from what Python allows, but better than nothing.
 

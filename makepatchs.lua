@@ -22,9 +22,9 @@ exec('git merge master')
 local patchfile = branch..'.patch'
 os.execute('git diff master >temp.patch')
 exec('git checkout master')
-local stat = exec('git apply --stat temp.patch') :match('\n([^\n]+)%s*$')
+local stat = exec('git apply --stat temp.patch') :match('\n[ \t]*([^\n]+)%s*$')
 local escapedpatchfile = patchfile:gsub('([-.])', '%%%1')
-readme = readme:gsub('(Download %[' .. escapedpatchfile .. '%])[ \t]*[^\n]+', '%1 (' .. stat .. ')')
+readme = readme:gsub('(Download %[' .. escapedpatchfile .. '%]%(' .. escapedpatchfile .. '%))[ \t]*[^\n]+', '%1 (' .. stat .. ')')
 do local fp <close> = io.open('temp.patch')
 patchs[patchfile] = fp:read('a')
 end end
