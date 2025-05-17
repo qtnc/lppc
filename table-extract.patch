@@ -1,0 +1,122 @@
+diff --git a/readme.md b/readme.md
+index 760cb2d..af8bfc9 100644
+--- a/readme.md
++++ b/readme.md
+@@ -19,6 +19,8 @@ Applying a patch is very easy:
+ ### Compound operators
+ Branch: compound-operators
+ 
++Download [compound-operators.patch] 
++
+ This patch adds the popular compound operators so well known and beloved in most other languages, that lua doesn't include by default.
+ 
+ - Add `+=, -=, *=, /=, //=, %=, ^=, |=, &=, <<=, >>=, ..=`
+@@ -41,6 +43,8 @@ print(t.u.v) -- 500
+ ### Lambdas
+ Branch: lambdas
+ 
++Download [lambdas.patch] ( 4 files changed, 89 insertions(+), 12 deletions(-))
++
+ This patch adds the support for shorter function syntax as known as lambdas, as it exists in other languages such as JavaScript, Java and Python.
+ JavaScript's syntax with `=>` has been retained.
+ 
+@@ -67,6 +71,8 @@ printcall( (a, b) => (b, a), 'one', 'two') -- two one
+ ## Table extraction in local variables
+ Branch: table-extract
+ 
++Download [table-extract.patch] ( 3 files changed, 39 insertions(+), 1 deletion(-))
++
+ This patch brings a little syntax suggar to extract multiple table fields into local variables at once.
+ 
+ - Add the syntax `local a, b, ... in expr `
+@@ -80,6 +86,8 @@ print(log(64, 2), floor(17.25), cos(0)) -- 6.0 17 1.0
+ ### Syntax suggar for defining methods in tables
+ Branch: methods-in-tables
+ 
++Download [methods-in-tables.patch] ( 2 files changed, 45 insertions(+), 3 deletions(-))
++
+ This patch brings a little syntax suggar to define methods in tables.
+ 
+ - Add method syntax in table (see below)
+@@ -110,6 +118,8 @@ print(mybank.balance) -- 1000
+ ### Better numbers
+ Branch: better-numbers
+ 
++Download [better-numbers.patch] ( 3 files changed, 29 insertions(+), 4 deletions(-))
++
+ This simple patch allows binary literals with 0b and thousend separators in  literals for better readability.
+ 
+ - Add underscore `_` thousend separator syntax in the code, e.g. `1_234_567` inspired by Java and JavaScript
+@@ -126,6 +136,8 @@ print(a+b) 1234575
+ ### Default type metatable
+ Branch: default-type-mt
+ 
++Download [default-type-mt.patch] ( 4 files changed, 66 insertions(+), 1 deletion(-))
++
+ You can call functions of the string table as methods without the need to do anything, because the type string has a shared metatable allowing it.
+ Why don't tables do the same and allow to call table.insert, table.remove, table.sort, etc. as methods as well ?
+ 
+@@ -150,6 +162,8 @@ print(t:concat(';')) -- 1;2;3;4;5
+ ### Stared expand in table constructor
+ Branch: star-expand
+ 
++Download [star-expand.patch] ( 4 files changed, 33 insertions(+), 9 deletions(-))
++
+ Well known by pythonists, this patch brings the unary `*` operator to lua, but it works only in table constructor to expand multiple arguments returned by a function. It's far from what Python allows, but better than nothing.
+ 
+ ```lua
+diff --git a/src/lcode.c b/src/lcode.c
+index 8761614..d73b7fe 100644
+--- a/src/lcode.c
++++ b/src/lcode.c
+@@ -996,7 +996,7 @@ void luaK_exp2val (FuncState *fs, expdesc *e) {
+ ** Try to make 'e' a K expression with an index in the range of R/K
+ ** indices. Return true iff succeeded.
+ */
+-static int luaK_exp2K (FuncState *fs, expdesc *e) {
++/*static*/ int luaK_exp2K (FuncState *fs, expdesc *e) {
+   if (!hasjumps(e)) {
+     int info;
+     switch (e->k) {  /* move constants to 'k' */
+diff --git a/src/lparser.c b/src/lparser.c
+index 2b888c7..97f1008 100644
+--- a/src/lparser.c
++++ b/src/lparser.c
+@@ -1722,6 +1722,26 @@ static void checktoclose (FuncState *fs, int level) {
+   }
+ }
+ 
++static void extractlocal (LexState* ls, int nvars) {
++FuncState* fs = ls->fs;
++expdesc e, v;
++  Vardesc *var;
++int firstvar = fs->nactvar;
++      luaK_nil(fs, fs->freereg, nvars);
++    adjustlocalvars(ls, nvars);
++  luaK_checkstack(fs, 1);
++fs->freereg += nvars;
++expr(ls, &e);
++fs->freereg -= nvars;
++init_exp(&v, VLOCAL, firstvar + nvars);
++luaK_storevar(fs, &v, &e);
++for (int i=0; i<nvars; i++) {
++  var = getlocalvardesc(fs, firstvar+i);
++codestring(&e, var->vd.name);
++luaK_exp2K(fs, &e);
++luaK_codeABC(fs, OP_GETFIELD, var->vd.ridx, firstvar + nvars, e.u.info);
++}
++}
+ 
+ static void localstat (LexState *ls) {
+   /* stat -> LOCAL NAME ATTRIB { ',' NAME ATTRIB } ['=' explist] */
+@@ -1745,6 +1765,10 @@ static void localstat (LexState *ls) {
+   } while (testnext(ls, ','));
+   if (testnext(ls, '='))
+     nexps = explist(ls, &e);
++  else if (testnext(ls, TK_IN)) {
++extractlocal(ls, nvars);
++return;
++  }
+   else {
+     e.k = VVOID;
+     nexps = 0;

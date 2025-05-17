@@ -1,0 +1,174 @@
+diff --git a/readme.md b/readme.md
+index 760cb2d..af8bfc9 100644
+--- a/readme.md
++++ b/readme.md
+@@ -19,6 +19,8 @@ Applying a patch is very easy:
+ ### Compound operators
+ Branch: compound-operators
+ 
++Download [compound-operators.patch] 
++
+ This patch adds the popular compound operators so well known and beloved in most other languages, that lua doesn't include by default.
+ 
+ - Add `+=, -=, *=, /=, //=, %=, ^=, |=, &=, <<=, >>=, ..=`
+@@ -41,6 +43,8 @@ print(t.u.v) -- 500
+ ### Lambdas
+ Branch: lambdas
+ 
++Download [lambdas.patch] ( 4 files changed, 89 insertions(+), 12 deletions(-))
++
+ This patch adds the support for shorter function syntax as known as lambdas, as it exists in other languages such as JavaScript, Java and Python.
+ JavaScript's syntax with `=>` has been retained.
+ 
+@@ -67,6 +71,8 @@ printcall( (a, b) => (b, a), 'one', 'two') -- two one
+ ## Table extraction in local variables
+ Branch: table-extract
+ 
++Download [table-extract.patch] ( 3 files changed, 39 insertions(+), 1 deletion(-))
++
+ This patch brings a little syntax suggar to extract multiple table fields into local variables at once.
+ 
+ - Add the syntax `local a, b, ... in expr `
+@@ -80,6 +86,8 @@ print(log(64, 2), floor(17.25), cos(0)) -- 6.0 17 1.0
+ ### Syntax suggar for defining methods in tables
+ Branch: methods-in-tables
+ 
++Download [methods-in-tables.patch] ( 2 files changed, 45 insertions(+), 3 deletions(-))
++
+ This patch brings a little syntax suggar to define methods in tables.
+ 
+ - Add method syntax in table (see below)
+@@ -110,6 +118,8 @@ print(mybank.balance) -- 1000
+ ### Better numbers
+ Branch: better-numbers
+ 
++Download [better-numbers.patch] ( 3 files changed, 29 insertions(+), 4 deletions(-))
++
+ This simple patch allows binary literals with 0b and thousend separators in  literals for better readability.
+ 
+ - Add underscore `_` thousend separator syntax in the code, e.g. `1_234_567` inspired by Java and JavaScript
+@@ -126,6 +136,8 @@ print(a+b) 1234575
+ ### Default type metatable
+ Branch: default-type-mt
+ 
++Download [default-type-mt.patch] ( 4 files changed, 66 insertions(+), 1 deletion(-))
++
+ You can call functions of the string table as methods without the need to do anything, because the type string has a shared metatable allowing it.
+ Why don't tables do the same and allow to call table.insert, table.remove, table.sort, etc. as methods as well ?
+ 
+@@ -150,6 +162,8 @@ print(t:concat(';')) -- 1;2;3;4;5
+ ### Stared expand in table constructor
+ Branch: star-expand
+ 
++Download [star-expand.patch] ( 4 files changed, 33 insertions(+), 9 deletions(-))
++
+ Well known by pythonists, this patch brings the unary `*` operator to lua, but it works only in table constructor to expand multiple arguments returned by a function. It's far from what Python allows, but better than nothing.
+ 
+ ```lua
+diff --git a/src/lapi.c b/src/lapi.c
+index 332e97d..752bdc0 100644
+--- a/src/lapi.c
++++ b/src/lapi.c
+@@ -798,6 +798,22 @@ LUA_API int lua_getmetatable (lua_State *L, int objindex) {
+   return res;
+ }
+ 
++LUA_API int lua_gettypemetatable (lua_State *L, int type) {
++  const TValue *obj;
++  Table *mt;
++  int res = 0;
++  lua_lock(L);
++  mt = G(L)->mt[type];
++  if (mt != NULL) {
++    sethvalue2s(L, L->top.p, mt);
++    api_incr_top(L);
++    res = 1;
++  }
++  lua_unlock(L);
++  return res;
++}
++
++
+ 
+ LUA_API int lua_getiuservalue (lua_State *L, int idx, int n) {
+   TValue *o;
+@@ -969,6 +985,22 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
+   return 1;
+ }
+ 
++LUA_API int lua_settypemetatable (lua_State *L, int type) {
++  Table *mt;
++  lua_lock(L);
++  api_checknelems(L, 1);
++  if (ttisnil(s2v(L->top.p - 1)))
++    mt = NULL;
++  else {
++    api_check(L, ttistable(s2v(L->top.p - 1)), "table expected");
++    mt = hvalue(s2v(L->top.p - 1));
++  }
++  G(L)->mt[type] = mt;
++  L->top.p--;
++  lua_unlock(L);
++  return 1;
++}
++
+ 
+ LUA_API int lua_setiuservalue (lua_State *L, int idx, int n) {
+   TValue *o;
+diff --git a/src/ldblib.c b/src/ldblib.c
+index 6dcbaa9..f1f3efd 100644
+--- a/src/ldblib.c
++++ b/src/ldblib.c
+@@ -61,6 +61,23 @@ static int db_setmetatable (lua_State *L) {
+   return 1;  /* return 1st argument */
+ }
+ 
++static int db_gettypemetatable (lua_State *L) {
++  luaL_checkany(L, 1);
++  if (!lua_gettypemetatable(L, lua_type(L, 1))) {
++    lua_pushnil(L);  /* no metatable */
++  }
++  return 1;
++}
++
++
++static int db_settypemetatable (lua_State *L) {
++  int t = lua_type(L, 2);
++  luaL_argexpected(L, t == LUA_TNIL || t == LUA_TTABLE, 2, "nil or table");
++  lua_settop(L, 2);
++  lua_settypemetatable(L, lua_type(L, 1));
++  return 1;  /* return 1st argument */
++}
++
+ 
+ static int db_getuservalue (lua_State *L) {
+   int n = (int)luaL_optinteger(L, 2, 1);
+@@ -462,6 +479,7 @@ static const luaL_Reg dblib[] = {
+   {"getlocal", db_getlocal},
+   {"getregistry", db_getregistry},
+   {"getmetatable", db_getmetatable},
++  {"gettypemetatable", db_gettypemetatable},
+   {"getupvalue", db_getupvalue},
+   {"upvaluejoin", db_upvaluejoin},
+   {"upvalueid", db_upvalueid},
+@@ -469,6 +487,7 @@ static const luaL_Reg dblib[] = {
+   {"sethook", db_sethook},
+   {"setlocal", db_setlocal},
+   {"setmetatable", db_setmetatable},
++  {"settypemetatable", db_settypemetatable},
+   {"setupvalue", db_setupvalue},
+   {"traceback", db_traceback},
+   {"setcstacklimit", db_setcstacklimit},
+diff --git a/src/ltable.c b/src/ltable.c
+index 3353c04..d051c83 100644
+--- a/src/ltable.c
++++ b/src/ltable.c
+@@ -626,7 +626,7 @@ static void rehash (lua_State *L, Table *t, const TValue *ek) {
+ Table *luaH_new (lua_State *L) {
+   GCObject *o = luaC_newobj(L, LUA_VTABLE, sizeof(Table));
+   Table *t = gco2t(o);
+-  t->metatable = NULL;
++  t->metatable = G(L)->mt[LUA_TTABLE];
+   t->flags = cast_byte(maskflags);  /* table has no metamethod fields */
+   t->array = NULL;
+   t->alimit = 0;

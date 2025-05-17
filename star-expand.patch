@@ -1,0 +1,176 @@
+diff --git a/readme.md b/readme.md
+index 760cb2d..af8bfc9 100644
+--- a/readme.md
++++ b/readme.md
+@@ -19,6 +19,8 @@ Applying a patch is very easy:
+ ### Compound operators
+ Branch: compound-operators
+ 
++Download [compound-operators.patch] 
++
+ This patch adds the popular compound operators so well known and beloved in most other languages, that lua doesn't include by default.
+ 
+ - Add `+=, -=, *=, /=, //=, %=, ^=, |=, &=, <<=, >>=, ..=`
+@@ -41,6 +43,8 @@ print(t.u.v) -- 500
+ ### Lambdas
+ Branch: lambdas
+ 
++Download [lambdas.patch] ( 4 files changed, 89 insertions(+), 12 deletions(-))
++
+ This patch adds the support for shorter function syntax as known as lambdas, as it exists in other languages such as JavaScript, Java and Python.
+ JavaScript's syntax with `=>` has been retained.
+ 
+@@ -67,6 +71,8 @@ printcall( (a, b) => (b, a), 'one', 'two') -- two one
+ ## Table extraction in local variables
+ Branch: table-extract
+ 
++Download [table-extract.patch] ( 3 files changed, 39 insertions(+), 1 deletion(-))
++
+ This patch brings a little syntax suggar to extract multiple table fields into local variables at once.
+ 
+ - Add the syntax `local a, b, ... in expr `
+@@ -80,6 +86,8 @@ print(log(64, 2), floor(17.25), cos(0)) -- 6.0 17 1.0
+ ### Syntax suggar for defining methods in tables
+ Branch: methods-in-tables
+ 
++Download [methods-in-tables.patch] ( 2 files changed, 45 insertions(+), 3 deletions(-))
++
+ This patch brings a little syntax suggar to define methods in tables.
+ 
+ - Add method syntax in table (see below)
+@@ -110,6 +118,8 @@ print(mybank.balance) -- 1000
+ ### Better numbers
+ Branch: better-numbers
+ 
++Download [better-numbers.patch] ( 3 files changed, 29 insertions(+), 4 deletions(-))
++
+ This simple patch allows binary literals with 0b and thousend separators in  literals for better readability.
+ 
+ - Add underscore `_` thousend separator syntax in the code, e.g. `1_234_567` inspired by Java and JavaScript
+@@ -126,6 +136,8 @@ print(a+b) 1234575
+ ### Default type metatable
+ Branch: default-type-mt
+ 
++Download [default-type-mt.patch] ( 4 files changed, 66 insertions(+), 1 deletion(-))
++
+ You can call functions of the string table as methods without the need to do anything, because the type string has a shared metatable allowing it.
+ Why don't tables do the same and allow to call table.insert, table.remove, table.sort, etc. as methods as well ?
+ 
+@@ -150,6 +162,8 @@ print(t:concat(';')) -- 1;2;3;4;5
+ ### Stared expand in table constructor
+ Branch: star-expand
+ 
++Download [star-expand.patch] ( 4 files changed, 33 insertions(+), 9 deletions(-))
++
+ Well known by pythonists, this patch brings the unary `*` operator to lua, but it works only in table constructor to expand multiple arguments returned by a function. It's far from what Python allows, but better than nothing.
+ 
+ ```lua
+diff --git a/src/lcode.c b/src/lcode.c
+index 8761614..f7b288f 100644
+--- a/src/lcode.c
++++ b/src/lcode.c
+@@ -1811,6 +1811,7 @@ void luaK_setlist (FuncState *fs, int base, int nelems, int tostore) {
+   lua_assert(tostore != 0 && tostore <= LFIELDS_PER_FLUSH);
+   if (tostore == LUA_MULTRET)
+     tostore = 0;
++    nelems++;
+   if (nelems <= MAXARG_C)
+     luaK_codeABC(fs, OP_SETLIST, base, tostore, nelems);
+   else {
+diff --git a/src/lparser.c b/src/lparser.c
+index 2b888c7..ac37424 100644
+--- a/src/lparser.c
++++ b/src/lparser.c
+@@ -841,6 +841,7 @@ typedef struct ConsControl {
+   int nh;  /* total number of 'record' elements */
+   int na;  /* number of array elements already stored */
+   int tostore;  /* number of array elements pending to be stored */
++  int naundef; /* non-zero if exact number of elements not known */
+ } ConsControl;
+ 
+ 
+@@ -870,7 +871,7 @@ static void closelistfield (FuncState *fs, ConsControl *cc) {
+   luaK_exp2nextreg(fs, &cc->v);
+   cc->v.k = VVOID;
+   if (cc->tostore == LFIELDS_PER_FLUSH) {
+-    luaK_setlist(fs, cc->t->u.info, cc->na, cc->tostore);  /* flush */
++    luaK_setlist(fs, cc->t->u.info, cc->naundef? LUA_MULTRET  : cc->na, cc->tostore);  /* flush */
+     cc->na += cc->tostore;
+     cc->tostore = 0;  /* no more items pending */
+   }
+@@ -881,15 +882,16 @@ static void lastlistfield (FuncState *fs, ConsControl *cc) {
+   if (cc->tostore == 0) return;
+   if (hasmultret(cc->v.k)) {
+     luaK_setmultret(fs, &cc->v);
+-    luaK_setlist(fs, cc->t->u.info, cc->na, LUA_MULTRET);
++    luaK_setlist(fs, cc->t->u.info, cc->naundef? LUA_MULTRET : cc->na, LUA_MULTRET);
+     cc->na--;  /* do not count last expression (unknown number of elements) */
+   }
+   else {
+     if (cc->v.k != VVOID)
+       luaK_exp2nextreg(fs, &cc->v);
+-    luaK_setlist(fs, cc->t->u.info, cc->na, cc->tostore);
++    luaK_setlist(fs, cc->t->u.info, cc->naundef? LUA_MULTRET : cc->na, cc->tostore);
+   }
+   cc->na += cc->tostore;
++  cc->tostore = 0;
+ }
+ 
+ 
+@@ -928,9 +930,10 @@ static void constructor (LexState *ls, expdesc *t) {
+   FuncState *fs = ls->fs;
+   int line = ls->linenumber;
+   int pc = luaK_codeABC(fs, OP_NEWTABLE, 0, 0, 0);
++int doflush = 0;
+   ConsControl cc;
+   luaK_code(fs, 0);  /* space for extra arg. */
+-  cc.na = cc.nh = cc.tostore = 0;
++  cc.na = cc.nh = cc.tostore = cc.naundef = 0;
+   cc.t = t;
+   init_exp(t, VNONRELOC, fs->freereg);  /* table will be at stack top */
+   luaK_reserveregs(fs, 1);
+@@ -939,9 +942,14 @@ static void constructor (LexState *ls, expdesc *t) {
+   do {
+     lua_assert(cc.v.k == VVOID || cc.tostore > 0);
+     if (ls->t.token == '}') break;
+-    closelistfield(fs, &cc);
++    if (doflush && cc.tostore>0 && hasmultret(cc.v.k)) {
++      lastlistfield(fs, &cc);
++      cc.naundef=1;
++    }
++    else closelistfield(fs, &cc);
++    doflush = testnext(ls, '*');
+     field(ls, &cc);
+-  } while (testnext(ls, ',') || testnext(ls, ';'));
++  } while (testnext(ls, ',') || testnext(ls, ';') );
+   check_match(ls, '}', '{', line);
+   lastlistfield(fs, &cc);
+   luaK_settablesize(fs, pc, t->u.info, cc.na, cc.nh);
+diff --git a/src/lvm.c b/src/lvm.c
+index fcd24e1..c59e534 100644
+--- a/src/lvm.c
++++ b/src/lvm.c
+@@ -1847,6 +1847,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
+         int n = GETARG_B(i);
+         unsigned int last = GETARG_C(i);
+         Table *h = hvalue(s2v(ra));
++        if (last == 0)
++          last = luaH_getn(h) + 1;
+         if (n == 0)
+           n = cast_int(L->top.p - ra) - 1;  /* get up to the top */
+         else
+@@ -1856,12 +1858,11 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
+           last += GETARG_Ax(*pc) * (MAXARG_C + 1);
+           pc++;
+         }
+-        if (last > luaH_realasize(h))  /* needs more space? */
++        if (--last > luaH_realasize(h))  /* needs more space? */
+           luaH_resizearray(L, h, last);  /* preallocate it at once */
+         for (; n > 0; n--) {
+           TValue *val = s2v(ra + n);
+-          setobj2t(L, &h->array[last - 1], val);
+-          last--;
++          setobj2t(L, &h->array[--last], val);
+           luaC_barrierback(L, obj2gco(h), val);
+         }
+         vmbreak;
