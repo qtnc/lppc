@@ -1,0 +1,116 @@
+diff --git a/readme.md b/readme.md
+index 760cb2d..af8bfc9 100644
+--- a/readme.md
++++ b/readme.md
+@@ -19,6 +19,8 @@ Applying a patch is very easy:
+ ### Compound operators
+ Branch: compound-operators
+ 
++Download [compound-operators.patch] 
++
+ This patch adds the popular compound operators so well known and beloved in most other languages, that lua doesn't include by default.
+ 
+ - Add `+=, -=, *=, /=, //=, %=, ^=, |=, &=, <<=, >>=, ..=`
+@@ -41,6 +43,8 @@ print(t.u.v) -- 500
+ ### Lambdas
+ Branch: lambdas
+ 
++Download [lambdas.patch] ( 4 files changed, 89 insertions(+), 12 deletions(-))
++
+ This patch adds the support for shorter function syntax as known as lambdas, as it exists in other languages such as JavaScript, Java and Python.
+ JavaScript's syntax with `=>` has been retained.
+ 
+@@ -67,6 +71,8 @@ printcall( (a, b) => (b, a), 'one', 'two') -- two one
+ ## Table extraction in local variables
+ Branch: table-extract
+ 
++Download [table-extract.patch] ( 3 files changed, 39 insertions(+), 1 deletion(-))
++
+ This patch brings a little syntax suggar to extract multiple table fields into local variables at once.
+ 
+ - Add the syntax `local a, b, ... in expr `
+@@ -80,6 +86,8 @@ print(log(64, 2), floor(17.25), cos(0)) -- 6.0 17 1.0
+ ### Syntax suggar for defining methods in tables
+ Branch: methods-in-tables
+ 
++Download [methods-in-tables.patch] ( 2 files changed, 45 insertions(+), 3 deletions(-))
++
+ This patch brings a little syntax suggar to define methods in tables.
+ 
+ - Add method syntax in table (see below)
+@@ -110,6 +118,8 @@ print(mybank.balance) -- 1000
+ ### Better numbers
+ Branch: better-numbers
+ 
++Download [better-numbers.patch] ( 3 files changed, 29 insertions(+), 4 deletions(-))
++
+ This simple patch allows binary literals with 0b and thousend separators in  literals for better readability.
+ 
+ - Add underscore `_` thousend separator syntax in the code, e.g. `1_234_567` inspired by Java and JavaScript
+@@ -126,6 +136,8 @@ print(a+b) 1234575
+ ### Default type metatable
+ Branch: default-type-mt
+ 
++Download [default-type-mt.patch] ( 4 files changed, 66 insertions(+), 1 deletion(-))
++
+ You can call functions of the string table as methods without the need to do anything, because the type string has a shared metatable allowing it.
+ Why don't tables do the same and allow to call table.insert, table.remove, table.sort, etc. as methods as well ?
+ 
+@@ -150,6 +162,8 @@ print(t:concat(';')) -- 1;2;3;4;5
+ ### Stared expand in table constructor
+ Branch: star-expand
+ 
++Download [star-expand.patch] ( 4 files changed, 33 insertions(+), 9 deletions(-))
++
+ Well known by pythonists, this patch brings the unary `*` operator to lua, but it works only in table constructor to expand multiple arguments returned by a function. It's far from what Python allows, but better than nothing.
+ 
+ ```lua
+diff --git a/src/llex.c b/src/llex.c
+index 5fc39a5..4224d8e 100644
+--- a/src/llex.c
++++ b/src/llex.c
+@@ -235,11 +235,11 @@ static int read_numeral (LexState *ls, SemInfo *seminfo) {
+   for (;;) {
+     if (check_next2(ls, expo))  /* exponent mark? */
+       check_next2(ls, "-+");  /* optional exponent sign */
+-    else if (lisxdigit(ls->current) || ls->current == '.')  /* '%x|%.' */
++    else if (lisxdigit(ls->current) || ls->current == '.' || ls->current == '_')  /* '%x|%.' */
+       save_and_next(ls);
+     else break;
+   }
+-  if (lislalpha(ls->current))  /* is numeral touching a letter? */
++  if (lislalpha(ls->current) && ls->current != '_')  /* is numeral touching a letter? */
+     save_and_next(ls);  /* force an error */
+   save(ls, '\0');
+   if (luaO_str2num(luaZ_buffer(ls->buff), &obj) == 0)  /* format error? */
+diff --git a/src/lobject.c b/src/lobject.c
+index 9cfa522..68be38b 100644
+--- a/src/lobject.c
++++ b/src/lobject.c
+@@ -282,13 +282,24 @@ static const char *l_str2int (const char *s, lua_Integer *result) {
+   if (s[0] == '0' &&
+       (s[1] == 'x' || s[1] == 'X')) {  /* hex? */
+     s += 2;  /* skip '0x' */
+-    for (; lisxdigit(cast_uchar(*s)); s++) {
++    for (; lisxdigit(cast_uchar(*s)) || *s == '_'; s++) {
++      if (*s == '_') continue;
+       a = a * 16 + luaO_hexavalue(*s);
+       empty = 0;
+     }
+   }
++  else if (s[0] == '0' &&
++      (s[1] == 'b' || s[1] == 'B')) {  /* binary? */
++    s += 2;  /* skip '0x' */
++    for (; *s == '0' || *s == '1' || *s == '_'; s++) {
++      if (*s == '_') continue;
++      a = a * 2 + (*s - '0');
++      empty = 0;
++    }
++  }
+   else {  /* decimal */
+-    for (; lisdigit(cast_uchar(*s)); s++) {
++    for (; lisdigit(cast_uchar(*s)) || *s=='_'; s++) {
++      if (*s == '_') continue;
+       int d = *s - '0';
+       if (a >= MAXBY10 && (a > MAXBY10 || d > MAXLASTD + neg))  /* overflow? */
+         return NULL;  /* do not accept it (as integer) */
