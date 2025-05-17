@@ -1,0 +1,146 @@
+diff --git a/readme.md b/readme.md
+index 760cb2d..af8bfc9 100644
+--- a/readme.md
++++ b/readme.md
+@@ -19,6 +19,8 @@ Applying a patch is very easy:
+ ### Compound operators
+ Branch: compound-operators
+ 
++Download [compound-operators.patch] 
++
+ This patch adds the popular compound operators so well known and beloved in most other languages, that lua doesn't include by default.
+ 
+ - Add `+=, -=, *=, /=, //=, %=, ^=, |=, &=, <<=, >>=, ..=`
+@@ -41,6 +43,8 @@ print(t.u.v) -- 500
+ ### Lambdas
+ Branch: lambdas
+ 
++Download [lambdas.patch] ( 4 files changed, 89 insertions(+), 12 deletions(-))
++
+ This patch adds the support for shorter function syntax as known as lambdas, as it exists in other languages such as JavaScript, Java and Python.
+ JavaScript's syntax with `=>` has been retained.
+ 
+@@ -67,6 +71,8 @@ printcall( (a, b) => (b, a), 'one', 'two') -- two one
+ ## Table extraction in local variables
+ Branch: table-extract
+ 
++Download [table-extract.patch] ( 3 files changed, 39 insertions(+), 1 deletion(-))
++
+ This patch brings a little syntax suggar to extract multiple table fields into local variables at once.
+ 
+ - Add the syntax `local a, b, ... in expr `
+@@ -80,6 +86,8 @@ print(log(64, 2), floor(17.25), cos(0)) -- 6.0 17 1.0
+ ### Syntax suggar for defining methods in tables
+ Branch: methods-in-tables
+ 
++Download [methods-in-tables.patch] ( 2 files changed, 45 insertions(+), 3 deletions(-))
++
+ This patch brings a little syntax suggar to define methods in tables.
+ 
+ - Add method syntax in table (see below)
+@@ -110,6 +118,8 @@ print(mybank.balance) -- 1000
+ ### Better numbers
+ Branch: better-numbers
+ 
++Download [better-numbers.patch] ( 3 files changed, 29 insertions(+), 4 deletions(-))
++
+ This simple patch allows binary literals with 0b and thousend separators in  literals for better readability.
+ 
+ - Add underscore `_` thousend separator syntax in the code, e.g. `1_234_567` inspired by Java and JavaScript
+@@ -126,6 +136,8 @@ print(a+b) 1234575
+ ### Default type metatable
+ Branch: default-type-mt
+ 
++Download [default-type-mt.patch] ( 4 files changed, 66 insertions(+), 1 deletion(-))
++
+ You can call functions of the string table as methods without the need to do anything, because the type string has a shared metatable allowing it.
+ Why don't tables do the same and allow to call table.insert, table.remove, table.sort, etc. as methods as well ?
+ 
+@@ -150,6 +162,8 @@ print(t:concat(';')) -- 1;2;3;4;5
+ ### Stared expand in table constructor
+ Branch: star-expand
+ 
++Download [star-expand.patch] ( 4 files changed, 33 insertions(+), 9 deletions(-))
++
+ Well known by pythonists, this patch brings the unary `*` operator to lua, but it works only in table constructor to expand multiple arguments returned by a function. It's far from what Python allows, but better than nothing.
+ 
+ ```lua
+diff --git a/src/lparser.c b/src/lparser.c
+index 2b888c7..0dae4bd 100644
+--- a/src/lparser.c
++++ b/src/lparser.c
+@@ -864,6 +864,24 @@ static void recfield (LexState *ls, ConsControl *cc) {
+   fs->freereg = reg;  /* free registers */
+ }
+ 
++static void body (LexState *ls, expdesc *e, int ismethod, int line);
++
++static int funcfield (LexState *ls, ConsControl *cc) {
++  /* funcfield -> FUNCTION funcname body */
++  FuncState *fs = ls->fs;
++  int reg = ls->fs->freereg;
++  expdesc tab, key, b;
++  luaX_next(ls);  /* skip FUNCTION */
++    checklimit(fs, cc->nh, MAX_INT, "items in a constructor");
++    codename(ls, &key);
++  cc->nh++;
++  tab = *cc->t;
++  luaK_indexed(fs, &tab, &key);
++  body(ls, &b, 1, ls->linenumber);
++  luaK_storevar(fs, &tab, &b);
++  fs->freereg = reg;  /* free registers */
++  return 1;
++}
+ 
+ static void closelistfield (FuncState *fs, ConsControl *cc) {
+   if (cc->v.k == VVOID) return;  /* there is no list item */
+@@ -900,8 +918,9 @@ static void listfield (LexState *ls, ConsControl *cc) {
+ }
+ 
+ 
+-static void field (LexState *ls, ConsControl *cc) {
++static int field (LexState *ls, ConsControl *cc) {
+   /* field -> listfield | recfield */
++  int nocomma = 0;
+   switch(ls->t.token) {
+     case TK_NAME: {  /* may be 'listfield' or 'recfield' */
+       if (luaX_lookahead(ls) != '=')  /* expression? */
+@@ -914,11 +933,19 @@ static void field (LexState *ls, ConsControl *cc) {
+       recfield(ls, cc);
+       break;
+     }
++    case TK_FUNCTION: {
++      if (luaX_lookahead(ls) != TK_NAME)  
++        listfield(ls, cc);
++      else
++        nocomma = funcfield(ls, cc);
++      break;
++    }
+     default: {
+       listfield(ls, cc);
+       break;
+     }
+   }
++  return nocomma;
+ }
+ 
+ 
+@@ -928,6 +955,7 @@ static void constructor (LexState *ls, expdesc *t) {
+   FuncState *fs = ls->fs;
+   int line = ls->linenumber;
+   int pc = luaK_codeABC(fs, OP_NEWTABLE, 0, 0, 0);
++  int nocomma = 0;
+   ConsControl cc;
+   luaK_code(fs, 0);  /* space for extra arg. */
+   cc.na = cc.nh = cc.tostore = 0;
+@@ -940,8 +968,8 @@ static void constructor (LexState *ls, expdesc *t) {
+     lua_assert(cc.v.k == VVOID || cc.tostore > 0);
+     if (ls->t.token == '}') break;
+     closelistfield(fs, &cc);
+-    field(ls, &cc);
+-  } while (testnext(ls, ',') || testnext(ls, ';'));
++    nocomma = field(ls, &cc);
++  } while (testnext(ls, ',') || testnext(ls, ';') || nocomma);
+   check_match(ls, '}', '{', line);
+   lastlistfield(fs, &cc);
+   luaK_settablesize(fs, pc, t->u.info, cc.na, cc.nh);
