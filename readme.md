@@ -108,6 +108,8 @@ print(mybank.balance) -- 1000
 ```
 
 ### Better numbers
+Branch: better-numbers
+
 This simple patch allows binary literals with 0b and thousend separators in  literals for better readability.
 
 - Add underscore `_` thousend separator syntax in the code, e.g. `1_234_567` inspired by Java and JavaScript
@@ -122,6 +124,8 @@ print(a+b) 1234575
 
 
 ### Default type metatable
+Branch: default-type-mt
+
 You can call functions of the string table as methods without the need to do anything, because the type string has a shared metatable allowing it.
 Why don't tables do the same and allow to call table.insert, table.remove, table.sort, etc. as methods as well ?
 
