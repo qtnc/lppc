@@ -418,7 +418,7 @@
 #define l_floor(x)		(l_mathop(floor)(x))
 
 #define lua_number2str(s,sz,n)  \
-	l_sprintf((s), sz, LUA_NUMBER_FMT, (LUAI_UACNUMBER)(n))
+	_snprintf_l((s), sz, LUA_NUMBER_FMT, lua_getclocale(), (LUAI_UACNUMBER)(n))
 
 /*
 @@ lua_numbertointeger converts a float number with an integral value
@@ -450,7 +450,7 @@
 
 #define l_mathop(op)		op##f
 
-#define lua_str2number(s,p)	strtof((s), (p))
+#define lua_str2number(s,p)	_strtof_l((s), (p), lua_getclocale())
 
 
 #elif LUA_FLOAT_TYPE == LUA_FLOAT_LONGDOUBLE	/* }{ long double */
@@ -466,7 +466,7 @@
 
 #define l_mathop(op)		op##l
 
-#define lua_str2number(s,p)	strtold((s), (p))
+#define lua_str2number(s,p)	_strtold_l((s), (p), lua_getclocale())
 
 #elif LUA_FLOAT_TYPE == LUA_FLOAT_DOUBLE	/* }{ double */
 
@@ -481,7 +481,7 @@
 
 #define l_mathop(op)		op
 
-#define lua_str2number(s,p)	strtod((s), (p))
+#define lua_str2number(s,p)	_strtod_l((s), (p), lua_getclocale())
 
 #else						/* }{ */
 
@@ -594,9 +594,9 @@
 ** (All uses in Lua have only one format item.)
 */
 #if !defined(LUA_USE_C89)
-#define l_sprintf(s,sz,f,i)	snprintf(s,sz,f,i)
+#define l_sprintf(s,sz,f,i)	_snprintf_l(s,sz,f,lua_getclocale(),i)
 #else
-#define l_sprintf(s,sz,f,i)	((void)(sz), sprintf(s,f,i))
+#define l_sprintf(s,sz,f,i)	((void)(sz), _sprintf_l(s,f,lua_getclocale(),i))
 #endif
 
 
@@ -626,7 +626,7 @@
 */
 #if !defined(LUA_USE_C89)
 #define lua_number2strx(L,b,sz,f,n)  \
-	((void)L, l_sprintf(b,sz,f,(LUAI_UACNUMBER)(n)))
+	((void)L, _snprintf_l(b,sz,f,lua_getclocale(),(LUAI_UACNUMBER)(n)))
 #endif
 
 
@@ -640,7 +640,7 @@
 #undef l_mathop  /* variants not available */
 #undef lua_str2number
 #define l_mathop(op)		(lua_Number)op  /* no variant */
-#define lua_str2number(s,p)	((lua_Number)strtod((s), (p)))
+#define lua_str2number(s,p)	((lua_Number)_strtod_l((s), (p), lua_getclocale()))
 #endif
 
 
@@ -668,7 +668,7 @@
 ** macro must include the header 'locale.h'.)
 */
 #if !defined(lua_getlocaledecpoint)
-#define lua_getlocaledecpoint()		(localeconv()->decimal_point[0])
+#define lua_getlocaledecpoint()		'.' /*(localeconv()->decimal_point[0])*/
 #endif
 
 

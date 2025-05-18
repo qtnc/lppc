@@ -29,6 +29,12 @@
 #include "lvm.h"
 
 
+LUAI_FUNC _locale_t lua_getclocale () {
+  static _locale_t c = NULL;
+  if (!c) c = _create_locale(LC_ALL, "C");
+  return c;
+}
+
 /*
 ** Computes ceil(log2(x))
 */

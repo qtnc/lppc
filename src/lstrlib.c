@@ -51,6 +51,7 @@
 
 
 
+LUAI_FUNC _locale_t lua_getclocale ();
 
 static int str_len (lua_State *L) {
   size_t l;
