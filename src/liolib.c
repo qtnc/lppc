@@ -481,10 +481,8 @@ static int read_number (lua_State *L, FILE *f) {
   RN rn;
   int count = 0;
   int hex = 0;
-  char decp[2];
+  char decp[2] = ".";
   rn.f = f; rn.n = 0;
-  decp[0] = lua_getlocaledecpoint();  /* get decimal point from locale */
-  decp[1] = '.';  /* always accept a dot */
   l_lockfile(rn.f);
   do { rn.c = l_getc(rn.f); } while (isspace(rn.c));  /* skip spaces */
   test2(&rn, "-+");  /* optional sign */

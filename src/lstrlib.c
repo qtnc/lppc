@@ -1042,7 +1042,7 @@ static int num2straux (char *buff, int sz, lua_Number x) {
     m = adddigit(buff, n++, m * (1 << L_NBFD));  /* add first digit */
     e -= L_NBFD;  /* this digit goes before the radix point */
     if (m > 0) {  /* more digits? */
-      buff[n++] = lua_getlocaledecpoint();  /* add radix point */
+      buff[n++] = '.';  /* add radix point */
       do {  /* add as many digits as needed */
         m = adddigit(buff, n++, m * 16);
       } while (m > 0);
@@ -1158,15 +1158,8 @@ static int quotefloat (lua_State *L, char *buff, lua_Number n) {
   else if (n != n)  /* NaN? */
     s = "(0/0)";
   else {  /* format number as hexadecimal */
-    int  nb = lua_number2strx(L, buff, MAX_ITEM,
+    return lua_number2strx(L, buff, MAX_ITEM,
                                  "%" LUA_NUMBER_FRMLEN "a", n);
-    /* ensures that 'buff' string uses a dot as the radix character */
-    if (memchr(buff, '.', nb) == NULL) {  /* no dot? */
-      char point = lua_getlocaledecpoint();  /* try locale point */
-      char *ppoint = (char *)memchr(buff, point, nb);
-      if (ppoint) *ppoint = '.';  /* change it to a dot */
-    }
-    return nb;
   }
   /* for the fixed representations */
   return l_sprintf(buff, MAX_ITEM, "%s", s);

@@ -169,7 +169,6 @@ static int isneg (const char **s) {
 ** C99 specification for 'strtod'
 */
 static lua_Number lua_strx2number (const char *s, char **endptr) {
-  int dot = lua_getlocaledecpoint();
   lua_Number r = l_mathop(0.0);  /* result (accumulator) */
   int sigdig = 0;  /* number of significant digits */
   int nosigdig = 0;  /* number of non-significant digits */
@@ -182,7 +181,7 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
   if (!(*s == '0' && (*(s + 1) == 'x' || *(s + 1) == 'X')))  /* check '0x' */
     return l_mathop(0.0);  /* invalid format (no '0x') */
   for (s += 2; ; s++) {  /* skip '0x' and read numeral */
-    if (*s == dot) {
+    if (*s == '.') {
       if (hasdot) break;  /* second dot? stop loop */
       else hasdot = 1;
     }
@@ -255,24 +254,11 @@ static const char *l_str2dloc (const char *s, lua_Number *result, int mode) {
 ** - '.' just optimizes the search for the common case (no special chars)
 */
 static const char *l_str2d (const char *s, lua_Number *result) {
-  const char *endptr;
   const char *pmode = strpbrk(s, ".xXnN");  /* look for special chars */
   int mode = pmode ? ltolower(cast_uchar(*pmode)) : 0;
   if (mode == 'n')  /* reject 'inf' and 'nan' */
     return NULL;
-  endptr = l_str2dloc(s, result, mode);  /* try to convert */
-  if (endptr == NULL) {  /* failed? may be a different locale */
-    char buff[L_MAXLENNUM + 1];
-    const char *pdot = strchr(s, '.');
-    if (pdot == NULL || strlen(s) > L_MAXLENNUM)
-      return NULL;  /* string too long or no dot; fail */
-    strcpy(buff, s);  /* copy string to buffer */
-    buff[pdot - s] = lua_getlocaledecpoint();  /* correct decimal point */
-    endptr = l_str2dloc(buff, result, mode);  /* try again */
-    if (endptr != NULL)
-      endptr = s + (endptr - buff);  /* make relative to 's' */
-  }
-  return endptr;
+  return l_str2dloc(s, result, mode);  /* try to convert */
 }
 
 
@@ -366,7 +352,7 @@ static int tostringbuff (TValue *obj, char *buff) {
   else {
     len = lua_number2str(buff, MAXNUMBER2STR, fltvalue(obj));
     if (buff[strspn(buff, "-0123456789")] == '\0') {  /* looks like an int? */
-      buff[len++] = lua_getlocaledecpoint();
+      buff[len++] = '.';
       buff[len++] = '0';  /* adds '.0' to result */
     }
   }
