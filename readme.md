@@ -199,13 +199,34 @@ In function calls, for example, You need to use table.unpack as shown above, it 
 
 ```lua
 print(*foo(1), foo(10)) -- Syntax error !
+print(table.unpack{ *foo(1), foo(10) }) -- OK
 ```
 
 Neither it works in assignments:
 
 ```lua
 a, b, c, d = *foo(10), 13 -- Syntax error !
+a, b, c, d = table.unpack{ *foo(10), 13 } -- OK
 ```
 
 The two later are impossible, or they would require a lot of changes in the bytecode and/or the VM.
 
+### Multiple expand in table constructor
+Branch: semicolon-expand
+
+Download [semicolon-expand.patch](semicolon-expand.patch) (3 files changed, 19 insertions(+), 9 deletions(-))
+
+Same patch as star-expand above, but using semicolon `;` suffix instead of star `*` prefix.
+
+```lua
+function foo (a)
+  return a, a+1, a+2
+end
+
+print(table.unpack{ foo(1), foo(10) }) -- 1, 10, 11, 12
+print(table.unpack{ foo(1); foo(10) }) -- 1, 2, 3, 10, 11, 12
+```
+
+Same limitations as above.
+
+```
