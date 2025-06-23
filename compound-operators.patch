@@ -138,10 +138,10 @@ index 389d2f8..df2cba9 100644
    TK_FLT, TK_INT, TK_NAME, TK_STRING
  };
 diff --git a/src/lparser.c b/src/lparser.c
-index 2b888c7..e9946cc 100644
+index 1ac8299..c609e26 100644
 --- a/src/lparser.c
 +++ b/src/lparser.c
-@@ -1402,6 +1402,55 @@ static void restassign (LexState *ls, struct LHS_assign *lh, int nvars) {
+@@ -1401,6 +1401,55 @@ static void restassign (LexState *ls, struct LHS_assign *lh, int nvars) {
    luaK_storevar(ls->fs, &lh->v, &e);
  }
  
@@ -197,7 +197,7 @@ index 2b888c7..e9946cc 100644
  
  static int cond (LexState *ls) {
    /* cond -> exp */
-@@ -1801,6 +1850,10 @@ static void exprstat (LexState *ls) {
+@@ -1800,6 +1849,10 @@ static void exprstat (LexState *ls) {
      v.prev = NULL;
      restassign(ls, &v, 1);
    }
