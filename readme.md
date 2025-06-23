@@ -1,5 +1,5 @@
 # Lua Power Patch Collection
-This repository contains several lua power patchs compatible with lua 5.4.7.
+This repository contains several lua power patchs compatible with lua 5.4.8.
 Each power patch is its own branch and independent from one another, making patch application as easy as it could be.
 
 ## What is a power patch ?
@@ -168,6 +168,15 @@ debug.settypemetatable({}, table)
 local t = { 1, 2, 3, 4, 5 }
 print(t:concat(';')) -- 1;2;3;4;5
 ```
+
+### Shorter table items
+Branch: shorter-table-items
+
+Download [shorter-table-items.patch](shorter-table-items.patch) (1 file changed, 21 insertions(+))
+
+This patch adds a few goodies in table construction:
+
+- `{ x= }` is a shortcut for `{ x=x }` 
 
 ### Stared expand in table constructor
 Branch: star-expand

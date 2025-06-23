@@ -1,8 +1,8 @@
 diff --git a/src/lcode.c b/src/lcode.c
-index 8761614..f7b288f 100644
+index 3f78370..bda68f9 100644
 --- a/src/lcode.c
 +++ b/src/lcode.c
-@@ -1811,6 +1811,7 @@ void luaK_setlist (FuncState *fs, int base, int nelems, int tostore) {
+@@ -1812,6 +1812,7 @@ void luaK_setlist (FuncState *fs, int base, int nelems, int tostore) {
    lua_assert(tostore != 0 && tostore <= LFIELDS_PER_FLUSH);
    if (tostore == LUA_MULTRET)
      tostore = 0;
@@ -11,7 +11,7 @@ index 8761614..f7b288f 100644
      luaK_codeABC(fs, OP_SETLIST, base, tostore, nelems);
    else {
 diff --git a/src/lparser.c b/src/lparser.c
-index 2b888c7..ac37424 100644
+index 1ac8299..28da055 100644
 --- a/src/lparser.c
 +++ b/src/lparser.c
 @@ -841,6 +841,7 @@ typedef struct ConsControl {
@@ -22,7 +22,7 @@ index 2b888c7..ac37424 100644
  } ConsControl;
  
  
-@@ -870,7 +871,7 @@ static void closelistfield (FuncState *fs, ConsControl *cc) {
+@@ -869,7 +870,7 @@ static void closelistfield (FuncState *fs, ConsControl *cc) {
    luaK_exp2nextreg(fs, &cc->v);
    cc->v.k = VVOID;
    if (cc->tostore == LFIELDS_PER_FLUSH) {
@@ -31,7 +31,7 @@ index 2b888c7..ac37424 100644
      cc->na += cc->tostore;
      cc->tostore = 0;  /* no more items pending */
    }
-@@ -881,15 +882,16 @@ static void lastlistfield (FuncState *fs, ConsControl *cc) {
+@@ -880,15 +881,16 @@ static void lastlistfield (FuncState *fs, ConsControl *cc) {
    if (cc->tostore == 0) return;
    if (hasmultret(cc->v.k)) {
      luaK_setmultret(fs, &cc->v);
@@ -50,7 +50,7 @@ index 2b888c7..ac37424 100644
  }
  
  
-@@ -928,9 +930,10 @@ static void constructor (LexState *ls, expdesc *t) {
+@@ -927,9 +929,10 @@ static void constructor (LexState *ls, expdesc *t) {
    FuncState *fs = ls->fs;
    int line = ls->linenumber;
    int pc = luaK_codeABC(fs, OP_NEWTABLE, 0, 0, 0);
@@ -62,7 +62,7 @@ index 2b888c7..ac37424 100644
    cc.t = t;
    init_exp(t, VNONRELOC, fs->freereg);  /* table will be at stack top */
    luaK_reserveregs(fs, 1);
-@@ -939,9 +942,14 @@ static void constructor (LexState *ls, expdesc *t) {
+@@ -938,9 +941,14 @@ static void constructor (LexState *ls, expdesc *t) {
    do {
      lua_assert(cc.v.k == VVOID || cc.tostore > 0);
      if (ls->t.token == '}') break;
@@ -80,10 +80,10 @@ index 2b888c7..ac37424 100644
    lastlistfield(fs, &cc);
    luaK_settablesize(fs, pc, t->u.info, cc.na, cc.nh);
 diff --git a/src/lvm.c b/src/lvm.c
-index fcd24e1..c59e534 100644
+index 7023a04..285c63a 100644
 --- a/src/lvm.c
 +++ b/src/lvm.c
-@@ -1847,6 +1847,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
+@@ -1850,6 +1850,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
          int n = GETARG_B(i);
          unsigned int last = GETARG_C(i);
          Table *h = hvalue(s2v(ra));
@@ -92,7 +92,7 @@ index fcd24e1..c59e534 100644
          if (n == 0)
            n = cast_int(L->top.p - ra) - 1;  /* get up to the top */
          else
-@@ -1856,12 +1858,11 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
+@@ -1859,12 +1861,11 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
            last += GETARG_Ax(*pc) * (MAXARG_C + 1);
            pc++;
          }

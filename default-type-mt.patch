@@ -1,5 +1,5 @@
 diff --git a/src/lapi.c b/src/lapi.c
-index 332e97d..752bdc0 100644
+index 04e09cf..c3f98ab 100644
 --- a/src/lapi.c
 +++ b/src/lapi.c
 @@ -798,6 +798,22 @@ LUA_API int lua_getmetatable (lua_State *L, int objindex) {
