@@ -1,8 +1,8 @@
 diff --git a/src/lparser.c b/src/lparser.c
-index 2b888c7..0dae4bd 100644
+index 1ac8299..6399e3e 100644
 --- a/src/lparser.c
 +++ b/src/lparser.c
-@@ -864,6 +864,24 @@ static void recfield (LexState *ls, ConsControl *cc) {
+@@ -863,6 +863,24 @@ static void recfield (LexState *ls, ConsControl *cc) {
    fs->freereg = reg;  /* free registers */
  }
  
@@ -27,7 +27,7 @@ index 2b888c7..0dae4bd 100644
  
  static void closelistfield (FuncState *fs, ConsControl *cc) {
    if (cc->v.k == VVOID) return;  /* there is no list item */
-@@ -900,8 +918,9 @@ static void listfield (LexState *ls, ConsControl *cc) {
+@@ -899,8 +917,9 @@ static void listfield (LexState *ls, ConsControl *cc) {
  }
  
  
@@ -38,7 +38,7 @@ index 2b888c7..0dae4bd 100644
    switch(ls->t.token) {
      case TK_NAME: {  /* may be 'listfield' or 'recfield' */
        if (luaX_lookahead(ls) != '=')  /* expression? */
-@@ -914,11 +933,19 @@ static void field (LexState *ls, ConsControl *cc) {
+@@ -913,11 +932,19 @@ static void field (LexState *ls, ConsControl *cc) {
        recfield(ls, cc);
        break;
      }
@@ -58,7 +58,7 @@ index 2b888c7..0dae4bd 100644
  }
  
  
-@@ -928,6 +955,7 @@ static void constructor (LexState *ls, expdesc *t) {
+@@ -927,6 +954,7 @@ static void constructor (LexState *ls, expdesc *t) {
    FuncState *fs = ls->fs;
    int line = ls->linenumber;
    int pc = luaK_codeABC(fs, OP_NEWTABLE, 0, 0, 0);
@@ -66,7 +66,7 @@ index 2b888c7..0dae4bd 100644
    ConsControl cc;
    luaK_code(fs, 0);  /* space for extra arg. */
    cc.na = cc.nh = cc.tostore = 0;
-@@ -940,8 +968,8 @@ static void constructor (LexState *ls, expdesc *t) {
+@@ -939,8 +967,8 @@ static void constructor (LexState *ls, expdesc *t) {
      lua_assert(cc.v.k == VVOID || cc.tostore > 0);
      if (ls->t.token == '}') break;
      closelistfield(fs, &cc);

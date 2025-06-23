@@ -1,5 +1,5 @@
 # Lua Power Patch Collection
-This repository contains several lua power patchs compatible with lua 5.4.7.
+This repository contains several lua power patchs compatible with lua 5.4.8.
 Each power patch is its own branch and independent from one another, making patch application as easy as it could be.
 
 ## What is a power patch ?
@@ -169,6 +169,15 @@ local t = { 1, 2, 3, 4, 5 }
 print(t:concat(';')) -- 1;2;3;4;5
 ```
 
+### Shorter table items
+Branch: shorter-table-items
+
+Download [shorter-table-items.patch](shorter-table-items.patch) (1 file changed, 21 insertions(+))
+
+This patch adds a few goodies in table construction:
+
+- `{ x= }` is a shortcut for `{ x=x }` 
+
 ### Stared expand in table constructor
 Branch: star-expand
 
@@ -190,13 +199,34 @@ In function calls, for example, You need to use table.unpack as shown above, it 
 
 ```lua
 print(*foo(1), foo(10)) -- Syntax error !
+print(table.unpack{ *foo(1), foo(10) }) -- OK
 ```
 
 Neither it works in assignments:
 
 ```lua
 a, b, c, d = *foo(10), 13 -- Syntax error !
+a, b, c, d = table.unpack{ *foo(10), 13 } -- OK
 ```
 
 The two later are impossible, or they would require a lot of changes in the bytecode and/or the VM.
 
+### Multiple expand in table constructor
+Branch: semicolon-expand
+
+Download [semicolon-expand.patch](semicolon-expand.patch) (3 files changed, 19 insertions(+), 9 deletions(-))
+
+Same patch as star-expand above, but using semicolon `;` suffix instead of star `*` prefix.
+
+```lua
+function foo (a)
+  return a, a+1, a+2
+end
+
+print(table.unpack{ foo(1), foo(10) }) -- 1, 10, 11, 12
+print(table.unpack{ foo(1); foo(10) }) -- 1, 2, 3, 10, 11, 12
+```
+
+Same limitations as above.
+
+```

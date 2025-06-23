@@ -73,10 +73,10 @@ index 389d2f8..66dd9b8 100644
    struct lua_State *L;
    ZIO *z;  /* input stream */
 diff --git a/src/lparser.c b/src/lparser.c
-index 2b888c7..38fe2a7 100644
+index 1ac8299..6721483 100644
 --- a/src/lparser.c
 +++ b/src/lparser.c
-@@ -956,13 +956,16 @@ static void setvararg (FuncState *fs, int nparams) {
+@@ -955,13 +955,16 @@ static void setvararg (FuncState *fs, int nparams) {
  }
  
  
@@ -95,7 +95,7 @@ index 2b888c7..38fe2a7 100644
      do {
        switch (ls->t.token) {
          case TK_NAME: {
-@@ -986,24 +989,31 @@ static void parlist (LexState *ls) {
+@@ -985,24 +988,31 @@ static void parlist (LexState *ls) {
    luaK_reserveregs(fs, fs->nactvar);  /* reserve registers for parameters */
  }
  
@@ -133,7 +133,7 @@ index 2b888c7..38fe2a7 100644
    codeclosure(ls, e);
    close_func(ls);
  }
-@@ -1136,6 +1146,16 @@ static void suffixedexp (LexState *ls, expdesc *v) {
+@@ -1135,6 +1145,16 @@ static void suffixedexp (LexState *ls, expdesc *v) {
    }
  }
  
@@ -150,7 +150,7 @@ index 2b888c7..38fe2a7 100644
  
  static void simpleexp (LexState *ls, expdesc *v) {
    /* simpleexp -> FLT | INT | STRING | NIL | TRUE | FALSE | ... |
-@@ -1183,6 +1203,24 @@ static void simpleexp (LexState *ls, expdesc *v) {
+@@ -1182,6 +1202,24 @@ static void simpleexp (LexState *ls, expdesc *v) {
        body(ls, v, 0, ls->linenumber);
        return;
      }
@@ -175,7 +175,7 @@ index 2b888c7..38fe2a7 100644
      default: {
        suffixedexp(ls, v);
        return;
-@@ -1841,6 +1879,21 @@ static void retstat (LexState *ls) {
+@@ -1840,6 +1878,21 @@ static void retstat (LexState *ls) {
    testnext(ls, ';');  /* skip optional semicolon */
  }
  

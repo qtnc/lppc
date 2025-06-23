@@ -11,7 +11,7 @@ index 3f78370..bda68f9 100644
      luaK_codeABC(fs, OP_SETLIST, base, tostore, nelems);
    else {
 diff --git a/src/lparser.c b/src/lparser.c
-index 1ac8299..28da055 100644
+index 1ac8299..c617a50 100644
 --- a/src/lparser.c
 +++ b/src/lparser.c
 @@ -841,6 +841,7 @@ typedef struct ConsControl {
@@ -72,10 +72,10 @@ index 1ac8299..28da055 100644
 +      cc.naundef=1;
 +    }
 +    else closelistfield(fs, &cc);
-+    doflush = testnext(ls, '*');
++    doflush = 0;
      field(ls, &cc);
 -  } while (testnext(ls, ',') || testnext(ls, ';'));
-+  } while (testnext(ls, ',') || testnext(ls, ';') );
++  } while (testnext(ls, ',') || (doflush = testnext(ls, ';')) );
    check_match(ls, '}', '{', line);
    lastlistfield(fs, &cc);
    luaK_settablesize(fs, pc, t->u.info, cc.na, cc.nh);
