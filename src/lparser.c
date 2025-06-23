@@ -946,9 +946,9 @@ int doflush = 0;
       cc.naundef=1;
     }
     else closelistfield(fs, &cc);
-    doflush = testnext(ls, '*');
+    doflush = 0;
     field(ls, &cc);
-  } while (testnext(ls, ',') || testnext(ls, ';') );
+  } while (testnext(ls, ',') || (doflush = testnext(ls, ';')) );
   check_match(ls, '}', '{', line);
   lastlistfield(fs, &cc);
   luaK_settablesize(fs, pc, t->u.info, cc.na, cc.nh);
