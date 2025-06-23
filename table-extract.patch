@@ -1,8 +1,8 @@
 diff --git a/src/lcode.c b/src/lcode.c
-index 8761614..d73b7fe 100644
+index 3f78370..9b06787 100644
 --- a/src/lcode.c
 +++ b/src/lcode.c
-@@ -996,7 +996,7 @@ void luaK_exp2val (FuncState *fs, expdesc *e) {
+@@ -997,7 +997,7 @@ void luaK_exp2val (FuncState *fs, expdesc *e) {
  ** Try to make 'e' a K expression with an index in the range of R/K
  ** indices. Return true iff succeeded.
  */
@@ -12,10 +12,10 @@ index 8761614..d73b7fe 100644
      int info;
      switch (e->k) {  /* move constants to 'k' */
 diff --git a/src/lparser.c b/src/lparser.c
-index 2b888c7..97f1008 100644
+index 1ac8299..af9544d 100644
 --- a/src/lparser.c
 +++ b/src/lparser.c
-@@ -1722,6 +1722,26 @@ static void checktoclose (FuncState *fs, int level) {
+@@ -1721,6 +1721,26 @@ static void checktoclose (FuncState *fs, int level) {
    }
  }
  
@@ -42,7 +42,7 @@ index 2b888c7..97f1008 100644
  
  static void localstat (LexState *ls) {
    /* stat -> LOCAL NAME ATTRIB { ',' NAME ATTRIB } ['=' explist] */
-@@ -1745,6 +1765,10 @@ static void localstat (LexState *ls) {
+@@ -1744,6 +1764,10 @@ static void localstat (LexState *ls) {
    } while (testnext(ls, ','));
    if (testnext(ls, '='))
      nexps = explist(ls, &e);
