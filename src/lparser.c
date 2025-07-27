@@ -955,13 +955,13 @@ static void setvararg (FuncState *fs, int nparams) {
 }
 
 
-static void parlist (LexState *ls) {
+static void parlist_ext (LexState *ls, int end_token) {
   /* parlist -> [ {NAME ','} (NAME | '...') ] */
   FuncState *fs = ls->fs;
   Proto *f = fs->f;
   int nparams = 0;
   int isvararg = 0;
-  if (ls->t.token != ')') {  /* is 'parlist' not empty? */
+  if (ls->t.token != end_token) {  /* is 'parlist' not empty? */
     do {
       switch (ls->t.token) {
         case TK_NAME: {
@@ -983,6 +983,10 @@ static void parlist (LexState *ls) {
   if (isvararg)
     setvararg(fs, f->numparams);  /* declared vararg */
   luaK_reserveregs(fs, fs->nactvar);  /* reserve registers for parameters */
+}
+
+static void parlist (LexState *ls) {
+  parlist_ext(ls, ')');
 }
 
 
@@ -1007,6 +1011,25 @@ static void body (LexState *ls, expdesc *e, int ismethod, int line) {
   close_func(ls);
 }
 
+
+static void simplebody (LexState *ls, expdesc *e, int line) {
+  /* simplebody ->  parlist `|' expr */
+  FuncState new_fs;
+  expdesc ebody;
+  int reg;
+  BlockCnt bl;
+  new_fs.f = addprototype(ls);
+  new_fs.f->linedefined = line;
+  open_func(ls, &new_fs, &bl);
+  parlist_ext(ls, '|');
+  checknext(ls, '|');
+  expr(ls, &ebody);
+  reg = luaK_exp2anyreg(&new_fs, &ebody);
+  luaK_ret(&new_fs, reg, 1);
+  new_fs.f->lastlinedefined = ls->linenumber;
+  codeclosure(ls, e);
+  close_func(ls);
+}
 
 static int explist (LexState *ls, expdesc *v) {
   /* explist -> expr { ',' expr } */
@@ -1135,7 +1158,6 @@ static void suffixedexp (LexState *ls, expdesc *v) {
   }
 }
 
-
 static void simpleexp (LexState *ls, expdesc *v) {
   /* simpleexp -> FLT | INT | STRING | NIL | TRUE | FALSE | ... |
                   constructor | FUNCTION body | suffixedexp */
@@ -1180,6 +1202,11 @@ static void simpleexp (LexState *ls, expdesc *v) {
     case TK_FUNCTION: {
       luaX_next(ls);
       body(ls, v, 0, ls->linenumber);
+      return;
+    }
+    case '|': {
+      luaX_next(ls);
+      simplebody(ls, v, ls->linenumber);
       return;
     }
     default: {
