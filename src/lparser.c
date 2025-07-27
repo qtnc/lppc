@@ -1013,7 +1013,7 @@ static void body (LexState *ls, expdesc *e, int ismethod, int line) {
 
 
 static void simplebody (LexState *ls, expdesc *e, int line) {
-  /* simplebody ->  parlist `|' expr */
+  /* simplebody ->  parlist `>' expr */
   FuncState new_fs;
   expdesc ebody;
   int reg;
@@ -1021,8 +1021,8 @@ static void simplebody (LexState *ls, expdesc *e, int line) {
   new_fs.f = addprototype(ls);
   new_fs.f->linedefined = line;
   open_func(ls, &new_fs, &bl);
-  parlist_ext(ls, '|');
-  checknext(ls, '|');
+  parlist_ext(ls, '>');
+  checknext(ls, '>');
   expr(ls, &ebody);
   reg = luaK_exp2anyreg(&new_fs, &ebody);
   luaK_ret(&new_fs, reg, 1);
@@ -1204,7 +1204,7 @@ static void simpleexp (LexState *ls, expdesc *v) {
       body(ls, v, 0, ls->linenumber);
       return;
     }
-    case '|': {
+    case '<': {
       luaX_next(ls);
       simplebody(ls, v, ls->linenumber);
       return;
