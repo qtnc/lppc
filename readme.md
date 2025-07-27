@@ -70,7 +70,7 @@ printcall( (a, b) => (b, a), 'one', 'two') -- two one
 ### Lambdas-ruby
 Branch: lambdas-ruby
 
-Download [lambdas-ruby.patch](lambdas-ruby.patch) (3 files changed, 75 insertions(+), 12 deletions(-))
+Download [lambdas-ruby.patch](lambdas-ruby.patch) (1 file changed, 30 insertions(+), 3 deletions(-))
 
 This is another patch to add lambdas in the language, this time with ruby style syntax: 
 `| args | ret` is translated to `function (args) return ret end `.
@@ -87,7 +87,7 @@ print(table.concat(t, ', ')) -- 5, 4, 3, 2, 1
 ### Lambdas-ltgt
 Branch: lambdas-ltgt
 
-Download [lambdas-ltgt.patch](lambdas-ltgt.patch) (3 files changed, 75 insertions(+), 12 deletions(-))
+Download [lambdas-ltgt.patch](lambdas-ltgt.patch) (1 file changed, 30 insertions(+), 3 deletions(-))
 
 This is another patch to add lambdas in the language, this time with another unique syntax:
 `<args> ret` is translated to `function (args) return ret end `.
