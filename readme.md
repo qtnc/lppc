@@ -8,7 +8,7 @@ A power patch usually changes core language features otherwise impossible to do 
 
 ## How to apply a patch ?
 
-1. Download lua from [lua.org](http://lua.org/) or just clone this repository which just holds a copy of the latest compatible version (to this date 5.4.7)
+1. Download lua from [lua.org](http://lua.org/) or just clone this repository which just holds a copy of the latest compatible version (to this date 5.4.8)
 2. git merge the branch of the patch you want, or download the patch file and run `git apply file.patch`. Most of the patches can be combined with each other, but you will need to handle conflicts yourself.
 3. Build lua as normal, by following [original build instructions](doc/readme.html).
 
@@ -65,6 +65,40 @@ end
 
 printcall(a=>a+1, 15) -- 16
 printcall( (a, b) => (b, a), 'one', 'two') -- two one
+```
+
+### Lambdas-ruby
+Branch: lambdas-ruby
+
+Download [lambdas-ruby.patch](lambdas-ruby.patch) (3 files changed, 75 insertions(+), 12 deletions(-))
+
+This is another patch to add lambdas in the language, this time with ruby style syntax: 
+`| args | ret` is translated to `function (args) return ret end `.
+
+- Only the lexer and the parser are modified, there's no change to the bytecode or the VM.
+
+
+```lua
+local t = { 2, 1, 4, 3, 5 }
+table.sort(t, | a, b | a>b)
+print(table.concat(t, ', ')) -- 5, 4, 3, 2, 1
+```
+
+### Lambdas-ltgt
+Branch: lambdas-ltgt
+
+Download [lambdas-ltgt.patch](lambdas-ltgt.patch) (3 files changed, 75 insertions(+), 12 deletions(-))
+
+This is another patch to add lambdas in the language, this time with another unique syntax:
+`<args> ret` is translated to `function (args) return ret end `.
+
+- Only the lexer and the parser are modified, there's no change to the bytecode or the VM.
+
+
+```lua
+local t = { 2, 1, 4, 3, 5 }
+table.sort(t, <a,b> a>b)
+print(table.concat(t, ', ')) -- 5, 4, 3, 2, 1
 ```
 
 ## Table extraction in local variables
