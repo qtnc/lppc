@@ -855,10 +855,10 @@ static void recfield (LexState *ls, ConsControl *cc) {
     yindex(ls, &key);
   checklimit(fs, cc->nh, MAX_INT, "items in a constructor");
   cc->nh++;
-  checknext(ls, '=');
   tab = *cc->t;
   luaK_indexed(fs, &tab, &key);
-  expr(ls, &val);
+    if (testnext(ls, '=')) expr(ls, &val);
+  else init_exp(&val, VTRUE, 0);
   luaK_storevar(fs, &tab, &val);
   fs->freereg = reg;  /* free registers */
 }
@@ -926,6 +926,8 @@ static void field (LexState *ls, ConsControl *cc) {
         recfield(ls, cc);
       break;
     }
+    case '.':
+      luaX_next(ls); // fallthrough
     case '[': {
       recfield(ls, cc);
       break;
