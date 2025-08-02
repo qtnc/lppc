@@ -206,7 +206,7 @@ print(t:concat(';')) -- 1;2;3;4;5
 ### Shorter table items
 Branch: shorter-table-items
 
-Download [shorter-table-items.patch](shorter-table-items.patch) (1 file changed, 21 insertions(+))
+Download [shorter-table-items.patch](shorter-table-items.patch) (1 file changed, 24 insertions(+), 1 deletion(-))
 
 This patch adds a few goodies in table construction:
 
@@ -217,7 +217,7 @@ This patch adds a few goodies in table construction:
 ### Default values for function parameters
 Branch: default-params
 
-Download [default-params.patch](default-params.patch) (1 file changed, 21 insertions(+))
+Download [default-params.patch](default-params.patch) (1 file changed, 51 insertions(+), 2 deletions(-))
 
 This patch allows to set default values for function parameters, as in JavaScript, Python and many other languages.
 
