@@ -952,6 +952,11 @@ static void constructor (LexState *ls, expdesc *t) {
 static void setvararg (FuncState *fs, int nparams) {
   fs->f->is_vararg = 1;
   luaK_codeABC(fs, OP_VARARGPREP, nparams, 0, 0);
+  if (fs->pc>1) {
+    Instruction inst = *(fs->f->code +fs->pc -1);
+    memmove(fs->f->code+1, fs->f->code, sizeof(Instruction)* (fs->pc -1));
+    *fs->f->code=inst;
+  }
 }
 
 static void pardefault (LexState* ls, int paridx, int regdelta) {
@@ -974,12 +979,12 @@ for (Instruction* inst = fs->f->code; inst<fs->f->code+fs->pc; inst++) {
 #define OP(X) x = GETARG_##X(*inst); if (x>=regdelta) SETARG_##X(*inst, x-regdelta+regstart);
 switch(GET_OPCODE(*inst)) {
 case OP_GETTABLE: case OP_SETTABLE: case OP_SELF: case OP_ADD: case OP_SUB: case OP_MUL: case OP_DIV: case OP_IDIV: case OP_MOD: case OP_BAND: case OP_BOR: case OP_BXOR: case OP_SHR: case OP_SHL: case OP_POW:
-OP(C)
+OP(C) // fallthrough
 case OP_MOVE: case OP_GETI: case OP_GETFIELD:
 case OP_ADDI: case OP_ADDK: case OP_SUBK: case OP_MULK: case OP_DIVK: case OP_IDIVK: case OP_MODK: case OP_POWK: case OP_BANDK: case OP_BORK: case OP_BXORK: case OP_SHRI: case OP_SHLI:
 case OP_MMBIN: case OP_UNM: case OP_NOT: case OP_BNOT: case OP_LEN:
 case OP_EQ: case OP_LT: case OP_LE: case OP_TESTSET: 
-OP(B)
+OP(B) // fallthrough
 case OP_LOADI: case OP_LOADF: case OP_LOADK: case OP_LOADKX: case OP_LOADFALSE: case OP_LFALSESKIP: case OP_LOADTRUE: case OP_LOADNIL: 
 case OP_GETUPVAL: case OP_SETUPVAL: case OP_GETTABUP: case OP_SETTABUP: case OP_NEWTABLE: 
 case OP_MMBINI: case OP_MMBINK: case OP_CONCAT: case OP_CLOSE: case OP_TBC: case OP_EQK: case OP_EQI: case OP_LTI: case OP_LEI: case OP_GTI: case OP_GEI: case OP_TEST: 
