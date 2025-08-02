@@ -210,7 +210,36 @@ Download [shorter-table-items.patch](shorter-table-items.patch) (1 file changed,
 
 This patch adds a few goodies in table construction:
 
-- `{ x= }` is a shortcut for `{ x=x }` 
+- `{ =x }` is a shortcut for `{ x=x }` 
+- `{ [x] }` is a shortcut for `{ [x]=true }` 
+- `{ .x }` is a shortcut for `{ x=true }`, and `{ .x=value }` is also accepted as equivalent to `{ x=value }` 
+
+### Default values for function parameters
+Branch: default-params
+
+Download [default-params.patch](default-params.patch) (1 file changed, 21 insertions(+))
+
+This patch allows to set default values for function parameters, as in JavaScript, Python and many other languages.
+
+```
+function (a, b='one', c='two')
+  print(a, b, c)
+end
+```
+
+Is equivalent to:
+
+```
+function (a, b, c)
+  b = b or 'one'
+  c = c or 'two'
+  print(a, b, c)
+end
+```
+
+- You can set, or not, a default value for all parameters independently, i.e. setting a default value for parameter N doesn't oblige you to set a default value for parameter N+1, N+2 and so on, as it's the case for example inC++.
+- You can use whatever expression you want in the default value, including function call, table construction, or use previous parameters
+- Be careful that the standard or operator is used, so a default value will overwrite a nil, but also a false value passed explicitely
 
 ### Stared expand in table constructor
 Branch: star-expand
