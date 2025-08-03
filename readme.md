@@ -8,7 +8,7 @@ A power patch usually changes core language features otherwise impossible to do 
 
 ## How to apply a patch ?
 
-1. Download lua from [lua.org](http://lua.org/) or just clone this repository which just holds a copy of the latest compatible version (to this date 5.4.7)
+1. Download lua from [lua.org](http://lua.org/) or just clone this repository which just holds a copy of the latest compatible version (to this date 5.4.8)
 2. git merge the branch of the patch you want, or download the patch file and run `git apply file.patch`. Most of the patches can be combined with each other, but you will need to handle conflicts yourself.
 3. Build lua as normal, by following [original build instructions](doc/readme.html).
 
@@ -65,6 +65,40 @@ end
 
 printcall(a=>a+1, 15) -- 16
 printcall( (a, b) => (b, a), 'one', 'two') -- two one
+```
+
+### Lambdas-ruby
+Branch: lambdas-ruby
+
+Download [lambdas-ruby.patch](lambdas-ruby.patch) (1 file changed, 30 insertions(+), 3 deletions(-))
+
+This is another patch to add lambdas in the language, this time with ruby style syntax: 
+`| args | ret` is translated to `function (args) return ret end `.
+
+- Only the lexer and the parser are modified, there's no change to the bytecode or the VM.
+
+
+```lua
+local t = { 2, 1, 4, 3, 5 }
+table.sort(t, | a, b | a>b)
+print(table.concat(t, ', ')) -- 5, 4, 3, 2, 1
+```
+
+### Lambdas-ltgt
+Branch: lambdas-ltgt
+
+Download [lambdas-ltgt.patch](lambdas-ltgt.patch) (1 file changed, 30 insertions(+), 3 deletions(-))
+
+This is another patch to add lambdas in the language, this time with another unique syntax:
+`<args> ret` is translated to `function (args) return ret end `.
+
+- Only the lexer and the parser are modified, there's no change to the bytecode or the VM.
+
+
+```lua
+local t = { 2, 1, 4, 3, 5 }
+table.sort(t, <a,b> a>b)
+print(table.concat(t, ', ')) -- 5, 4, 3, 2, 1
 ```
 
 ## Table extraction in local variables
@@ -172,11 +206,40 @@ print(t:concat(';')) -- 1;2;3;4;5
 ### Shorter table items
 Branch: shorter-table-items
 
-Download [shorter-table-items.patch](shorter-table-items.patch) (1 file changed, 21 insertions(+))
+Download [shorter-table-items.patch](shorter-table-items.patch) (1 file changed, 24 insertions(+), 1 deletion(-))
 
 This patch adds a few goodies in table construction:
 
-- `{ x= }` is a shortcut for `{ x=x }` 
+- `{ =x }` is a shortcut for `{ x=x }` 
+- `{ [x] }` is a shortcut for `{ [x]=true }` 
+- `{ .x }` is a shortcut for `{ x=true }`, and `{ .x=value }` is also accepted as equivalent to `{ x=value }` 
+
+### Default values for function parameters
+Branch: default-params
+
+Download [default-params.patch](default-params.patch) (1 file changed, 51 insertions(+), 2 deletions(-))
+
+This patch allows to set default values for function parameters, as in JavaScript, Python and many other languages.
+
+```
+function (a, b='one', c='two')
+  print(a, b, c)
+end
+```
+
+Is equivalent to:
+
+```
+function (a, b, c)
+  b = b or 'one'
+  c = c or 'two'
+  print(a, b, c)
+end
+```
+
+- You can set, or not, a default value for all parameters independently, i.e. setting a default value for parameter N doesn't oblige you to set a default value for parameter N+1, N+2 and so on, as it's the case for example inC++.
+- You can use whatever expression you want in the default value, including function call, table construction, or use previous parameters
+- Be careful that the standard or operator is used, so a default value will overwrite a nil, but also a false value passed explicitely
 
 ### Stared expand in table constructor
 Branch: star-expand
