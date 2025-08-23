@@ -184,6 +184,7 @@
 #define LUA_PATH_SEP            ";"
 #define LUA_PATH_MARK           "?"
 #define LUA_EXEC_DIR            "!"
+#define LUA_HOME_DIR            "~"
 
 
 /*
@@ -204,7 +205,8 @@
 */
 #define LUA_LDIR	"!\\lua\\"
 #define LUA_CDIR	"!\\"
-#define LUA_SHRDIR	"!\\..\\share\\lua\\" LUA_VDIR "\\"
+#define LUA_SHRDIR	"~\\luarocks\\share\\lua\\" LUA_VDIR "\\"
+#define LUA_LIBSHRDIR	"~\\luarocks\\lib\\lua\\" LUA_VDIR "\\"
 
 #if !defined(LUA_PATH_DEFAULT)
 #define LUA_PATH_DEFAULT  \
@@ -217,7 +219,7 @@
 #if !defined(LUA_CPATH_DEFAULT)
 #define LUA_CPATH_DEFAULT \
 		LUA_CDIR"?.dll;" \
-		LUA_CDIR"..\\lib\\lua\\" LUA_VDIR "\\?.dll;" \
+		LUA_LIBSHRDIR"?.dll;" \
 		LUA_CDIR"loadall.dll;" ".\\?.dll"
 #endif
 

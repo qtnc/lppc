@@ -166,6 +166,7 @@ static lua_CFunction lsys_sym (lua_State *L, void *lib, const char *sym) {
 ** of LUA_EXEC_DIR with the executable's path.
 */
 static void setprogdir (lua_State *L) {
+  char *appdata = getenv("APPDATA");
   char buff[MAX_PATH + 1];
   char *lb;
   DWORD nsize = sizeof(buff)/sizeof(char);
@@ -175,6 +176,10 @@ static void setprogdir (lua_State *L) {
   else {
     *lb = '\0';  /* cut name on the last '\\' to get the path */
     luaL_gsub(L, lua_tostring(L, -1), LUA_EXEC_DIR, buff);
+    lua_remove(L, -2);  /* remove original string */
+  }
+  if (appdata) {
+    luaL_gsub(L, lua_tostring(L, -1), LUA_HOME_DIR, appdata);
     lua_remove(L, -2);  /* remove original string */
   }
 }
