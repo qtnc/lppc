@@ -18,7 +18,7 @@ A power patch usually changes core language features otherwise impossible to do 
 ### Compound operators
 Branch: compound-operators
 
-Download [compound-operators.patch](compound-operators.patch) (16 files changed, 122 insertions(+), 1270 deletions(-))
+Download [compound-operators.patch](compound-operators.patch) (3 files changed, 122 insertions(+), 7 deletions(-))
 
 This patch adds the popular compound operators so well known and beloved in most other languages, that lua doesn't include by default.
 
@@ -42,7 +42,7 @@ print(t.u.v) -- 500
 ### Lambdas
 Branch: lambdas
 
-Download [lambdas.patch](lambdas.patch) (16 files changed, 75 insertions(+), 1275 deletions(-))
+Download [lambdas.patch](lambdas.patch) (3 files changed, 75 insertions(+), 12 deletions(-))
 
 This patch adds the support for shorter function syntax as known as lambdas, as it exists in other languages such as JavaScript, Java and Python.
 JavaScript's syntax with `=>` has been retained.
@@ -70,7 +70,7 @@ printcall( (a, b) => (b, a), 'one', 'two') -- two one
 ### Lambdas-ruby
 Branch: lambdas-ruby
 
-Download [lambdas-ruby.patch](lambdas-ruby.patch) (14 files changed, 30 insertions(+), 1266 deletions(-))
+Download [lambdas-ruby.patch](lambdas-ruby.patch) (1 file changed, 30 insertions(+), 3 deletions(-))
 
 This is another patch to add lambdas in the language, this time with ruby style syntax: 
 `| args | ret` is translated to `function (args) return ret end `.
@@ -87,7 +87,7 @@ print(table.concat(t, ', ')) -- 5, 4, 3, 2, 1
 ### Lambdas-ltgt
 Branch: lambdas-ltgt
 
-Download [lambdas-ltgt.patch](lambdas-ltgt.patch) (14 files changed, 30 insertions(+), 1266 deletions(-))
+Download [lambdas-ltgt.patch](lambdas-ltgt.patch) (1 file changed, 30 insertions(+), 3 deletions(-))
 
 This is another patch to add lambdas in the language, this time with another unique syntax:
 `<args> ret` is translated to `function (args) return ret end `.
@@ -104,7 +104,7 @@ print(table.concat(t, ', ')) -- 5, 4, 3, 2, 1
 ### Optional then/do after if/elseif/while/for
 Branch: optional-then-do
 
-Download [optional-then-do.patch](optional-then-do.patch) (14 files changed, 3 insertions(+), 1266 deletions(-))
+Download [optional-then-do.patch](optional-then-do.patch) (1 file changed, 3 insertions(+), 3 deletions(-))
 
 This little patch makes the keywords **then** and **do** optional after **if**, **elseif**, **while** and **for**.
 
@@ -119,7 +119,7 @@ As a statement almost never starts with `(`, `[` or `{`, it normally doesn't cau
 ### Multiple local variables declaration
 Branch: multilocal
 
-Download [multilocal.patch](multilocal.patch) (14 files changed, 13 insertions(+), 1271 deletions(-))
+Download [multilocal.patch](multilocal.patch) (1 file changed, 13 insertions(+), 8 deletions(-))
 
 The lua syntax for declaring and initializing several local variables at once has always bugged me:
 
@@ -147,7 +147,7 @@ local a = 1, b = 2, c = 3
 ## Table extraction in local variables
 Branch: table-extract
 
-Download [table-extract.patch](table-extract.patch) (15 files changed, 25 insertions(+), 1264 deletions(-))
+Download [table-extract.patch](table-extract.patch) (2 files changed, 25 insertions(+), 1 deletion(-))
 
 This patch brings a little syntax suggar to extract multiple table fields into local variables at once.
 
@@ -162,7 +162,7 @@ print(log(64, 2), floor(17.25), cos(0)) -- 6.0 17 1.0
 ### Syntax suggar for defining methods in tables
 Branch: methods-in-tables
 
-Download [methods-in-tables.patch](methods-in-tables.patch) (14 files changed, 31 insertions(+), 1266 deletions(-))
+Download [methods-in-tables.patch](methods-in-tables.patch) (1 file changed, 31 insertions(+), 3 deletions(-))
 
 This patch brings a little syntax suggar to define methods in tables.
 
@@ -194,7 +194,7 @@ print(mybank.balance) -- 1000
 ### Binary number literals and thousand separator 
 Branch: better-numbers
 
-Download [better-numbers.patch](better-numbers.patch) (15 files changed, 15 insertions(+), 1267 deletions(-))
+Download [better-numbers.patch](better-numbers.patch) (2 files changed, 15 insertions(+), 4 deletions(-))
 
 This simple patch allows binary literals with 0b and thousend separators in  literals for better readability.
 
@@ -211,7 +211,7 @@ print(a+b) 1234575
 ### A few string additions
 Branch: better-strings
 
-Download [better-strings.patch](better-strings.patch) (15 files changed, 10 insertions(+), 1268 deletions(-))
+Download [better-strings.patch](better-strings.patch) (2 files changed, 10 insertions(+), 5 deletions(-))
 
 This very small patch adds some string improvements:
 
@@ -223,7 +223,7 @@ This very small patch adds some string improvements:
 ### Default type metatable
 Branch: default-type-mt
 
-Download [default-type-mt.patch](default-type-mt.patch) (16 files changed, 52 insertions(+), 1264 deletions(-))
+Download [default-type-mt.patch](default-type-mt.patch) (3 files changed, 52 insertions(+), 1 deletion(-))
 
 You can call functions of the string table as methods without the need to do anything, because the type string has a shared metatable allowing it.
 Why don't tables do the same and allow to call table.insert, table.remove, table.sort, etc. as methods as well ?
@@ -249,7 +249,7 @@ print(t:concat(';')) -- 1;2;3;4;5
 ### Shorter table items
 Branch: shorter-table-items
 
-Download [shorter-table-items.patch](shorter-table-items.patch) (14 files changed, 24 insertions(+), 1264 deletions(-))
+Download [shorter-table-items.patch](shorter-table-items.patch) (1 file changed, 24 insertions(+), 1 deletion(-))
 
 This patch adds a few goodies in table construction:
 
@@ -260,7 +260,7 @@ This patch adds a few goodies in table construction:
 ### Default values for function parameters
 Branch: default-params
 
-Download [default-params.patch](default-params.patch) (14 files changed, 51 insertions(+), 1265 deletions(-))
+Download [default-params.patch](default-params.patch) (1 file changed, 51 insertions(+), 2 deletions(-))
 
 This patch allows to set default values for function parameters, as in JavaScript, Python and many other languages.
 
@@ -287,7 +287,7 @@ end
 ### Stared expand in table constructor
 Branch: star-expand
 
-Download [star-expand.patch](star-expand.patch) (16 files changed, 19 insertions(+), 1272 deletions(-))
+Download [star-expand.patch](star-expand.patch) (3 files changed, 19 insertions(+), 9 deletions(-))
 
 Well known by pythonists, this patch brings the unary `*` operator to lua, but it works only in table constructor to expand multiple arguments returned by a function. It's far from what Python allows, but better than nothing.
 
@@ -320,7 +320,7 @@ The two later are impossible, or they would require a lot of changes in the byte
 ### Multiple expand in table constructor
 Branch: semicolon-expand
 
-Download [semicolon-expand.patch](semicolon-expand.patch) (16 files changed, 19 insertions(+), 1272 deletions(-))
+Download [semicolon-expand.patch](semicolon-expand.patch) (3 files changed, 19 insertions(+), 9 deletions(-))
 
 Same patch as star-expand above, but using semicolon `;` suffix instead of star `*` prefix.
 
@@ -338,7 +338,7 @@ Same limitations as above.
 ### Stop implicit locale formatting
 Branch: better-locale
 
-Download [better-locale.patch](better-locale.patch) (18 files changed, 57 insertions(+), 1310 deletions(-))
+Download [better-locale.patch](better-locale.patch) (5 files changed, 57 insertions(+), 47 deletions(-))
 
 It's sometimes indesirable that numbers are implicitly formatted taking locale into account, both with print and with string.format.
 This patch makes print and string.format always use the C locale, making them independant from locale, and so, formatting is always consistent.
@@ -348,7 +348,7 @@ This patch also adds a function os.localeconv(). It returns a table with the con
 ### Load C modules from lua executable / statically linked lua C modules
 Branch: loadlib-self
 
-Download [loadlib-self.patch](loadlib-self.patch) (14 files changed, 2 insertions(+), 1265 deletions(-))
+Download [loadlib-self.patch](loadlib-self.patch) (1 file changed, 2 insertions(+), 2 deletions(-))
 
 Adds the possibility to load lua C functions from own lua executable, by passing an empty string as the first argument of package.loadlib.
 For example, this allows to statically link with lua modules, using a loader like the following:
