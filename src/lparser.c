@@ -955,13 +955,16 @@ static void setvararg (FuncState *fs, int nparams) {
 }
 
 
-static void parlist (LexState *ls) {
+static void parlist (LexState *ls, int parens) {
   /* parlist -> [ {NAME ','} (NAME | '...') ] */
   FuncState *fs = ls->fs;
   Proto *f = fs->f;
   int nparams = 0;
   int isvararg = 0;
-  if (ls->t.token != ')') {  /* is 'parlist' not empty? */
+  if (
+    (parens && ls->t.token != ')') 
+    || (!parens && ls->t.token != TK_RARROW && ls->t.token != '{')
+  ) {  /* is 'parlist' not empty? */
     do {
       switch (ls->t.token) {
         case TK_NAME: {
@@ -985,24 +988,31 @@ static void parlist (LexState *ls) {
   luaK_reserveregs(fs, fs->nactvar);  /* reserve registers for parameters */
 }
 
+static void singleretstat (LexState* ls);
 
 static void body (LexState *ls, expdesc *e, int ismethod, int line) {
   /* body ->  '(' parlist ')' block END */
   FuncState new_fs;
   BlockCnt bl;
+  int parens;
   new_fs.f = addprototype(ls);
   new_fs.f->linedefined = line;
   open_func(ls, &new_fs, &bl);
-  checknext(ls, '(');
+  parens = testnext(ls, '(');
   if (ismethod) {
     new_localvarliteral(ls, "self");  /* create 'self' parameter */
     adjustlocalvars(ls, 1);
   }
-  parlist(ls);
-  checknext(ls, ')');
-  statlist(ls);
-  new_fs.f->lastlinedefined = ls->linenumber;
-  check_match(ls, TK_END, TK_FUNCTION, line);
+  parlist(ls, parens);
+  if (parens) checknext(ls, ')');
+  if (testnext(ls, TK_RARROW)) {
+    singleretstat(ls);
+   new_fs.f->lastlinedefined = ls->linenumber;
+  } else {
+    statlist(ls);
+    new_fs.f->lastlinedefined = ls->linenumber;
+    check_match(ls, TK_END, TK_FUNCTION, line);
+  }
   codeclosure(ls, e);
   close_func(ls);
 }
@@ -1135,6 +1145,16 @@ static void suffixedexp (LexState *ls, expdesc *v) {
   }
 }
 
+static int testlambdadecl (LexState* ls) {
+int tk = luaX_lookahead(ls);
+  if (tk == ')') return 1;
+  else if (tk != TK_NAME) return 0;
+  tk = luaX_lookahead(ls);
+  if (tk == ',') return 1;
+  else if (tk != ')') return 0;
+  tk = luaX_lookahead(ls);
+  return tk == TK_RARROW;
+}
 
 static void simpleexp (LexState *ls, expdesc *v) {
   /* simpleexp -> FLT | INT | STRING | NIL | TRUE | FALSE | ... |
@@ -1180,6 +1200,24 @@ static void simpleexp (LexState *ls, expdesc *v) {
     case TK_FUNCTION: {
       luaX_next(ls);
       body(ls, v, 0, ls->linenumber);
+      return;
+    }
+    case TK_RARROW: {
+      body(ls, v, 0, ls->linenumber);
+      return;
+    }
+    case TK_NAME: {
+      if (luaX_lookahead(ls) == TK_RARROW)
+        body(ls, v, 0, ls->linenumber);
+      else
+        suffixedexp(ls, v);
+      return;
+    }
+    case '(': {
+      if (testlambdadecl(ls)) 
+        body(ls, v, 0, ls->linenumber);
+      else
+        suffixedexp(ls, v);
       return;
     }
     default: {
@@ -1838,6 +1876,21 @@ static void retstat (LexState *ls) {
   }
   luaK_ret(fs, first, nret);
   testnext(ls, ';');  /* skip optional semicolon */
+}
+
+static void singleretstat (LexState* ls) {
+expdesc e;
+int line = ls->linenumber;
+if (testnext(ls, '(')) {
+retstat(ls);
+check_match(ls, ')', '(', line);
+}
+else {
+expr(ls, &e);
+  int first = luaY_nvarstack(ls->fs);  /* first slot to be returned */
+        first = luaK_exp2anyreg(ls->fs, &e);  /* can use original slot */
+  luaK_ret(ls->fs, first, 1);
+}
 }
 
 

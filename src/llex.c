@@ -42,6 +42,7 @@ static const char *const luaX_tokens [] = {
     "end", "false", "for", "function", "goto", "if",
     "in", "local", "nil", "not", "or", "repeat",
     "return", "then", "true", "until", "while",
+    "=>", 
     "//", "..", "...", "==", ">=", "<=", "~=",
     "<<", ">>", "::", "<eof>",
     "<number>", "<integer>", "<name>", "<string>"
@@ -170,6 +171,8 @@ void luaX_setinput (lua_State *L, LexState *ls, ZIO *z, TString *source,
   ls->L = L;
   ls->current = firstchar;
   ls->lookahead.token = TK_EOS;  /* no look-ahead token */
+  ls->lookahead2.token = TK_EOS;  /* no look-ahead token */
+  ls->lookahead3.token = TK_EOS;  /* no look-ahead token */
   ls->z = z;
   ls->fs = NULL;
   ls->linenumber = 1;
@@ -486,6 +489,7 @@ static int llex (LexState *ls, SemInfo *seminfo) {
       case '=': {
         next(ls);
         if (check_next1(ls, '=')) return TK_EQ;  /* '==' */
+        else if (check_next1(ls, '>')) return TK_RARROW;  /* '=>' */
         else return '=';
       }
       case '<': {
@@ -566,7 +570,9 @@ void luaX_next (LexState *ls) {
   ls->lastline = ls->linenumber;
   if (ls->lookahead.token != TK_EOS) {  /* is there a look-ahead token? */
     ls->t = ls->lookahead;  /* use this one */
-    ls->lookahead.token = TK_EOS;  /* and discharge it */
+    ls->lookahead = ls->lookahead2;
+    ls->lookahead2 = ls->lookahead3;
+    ls->lookahead3.token = TK_EOS;  /* and discharge it */
   }
   else
     ls->t.token = llex(ls, &ls->t.seminfo);  /* read next token */
@@ -574,8 +580,9 @@ void luaX_next (LexState *ls) {
 
 
 int luaX_lookahead (LexState *ls) {
-  lua_assert(ls->lookahead.token == TK_EOS);
-  ls->lookahead.token = llex(ls, &ls->lookahead.seminfo);
-  return ls->lookahead.token;
+  lua_assert(ls->lookahead3.token == TK_EOS);
+  Token* t = ls->lookahead.token == TK_EOS ? &ls->lookahead : (ls->lookahead2.token == TK_EOS? &ls->lookahead2 : &ls->lookahead3);
+  t->token = llex(ls, &t->seminfo);
+  return t->token;
 }
 
