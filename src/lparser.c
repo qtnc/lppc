@@ -1401,6 +1401,55 @@ static void restassign (LexState *ls, struct LHS_assign *lh, int nvars) {
   luaK_storevar(ls->fs, &lh->v, &e);
 }
 
+static BinOpr getcompoundbinopr (int op) {
+  switch (op) {
+    case TK_ADDAS: return OPR_ADD;
+    case TK_SUBAS: return OPR_SUB;
+    case TK_MULAS: return OPR_MUL;
+    case TK_MODAS: return OPR_MOD;
+    case TK_POWAS: return OPR_POW;
+    case TK_DIVAS: return OPR_DIV;
+    case TK_IDIVAS: return OPR_IDIV;
+    case TK_BANDAS: return OPR_BAND;
+    case TK_BORAS: return OPR_BOR;
+    case TK_BXORAS: return OPR_BXOR;
+    case TK_SHLAS: return OPR_SHL;
+    case TK_SHRAS: return OPR_SHR;
+    case TK_CONCATAS: return OPR_CONCAT;
+    case TK_ANDAS: return OPR_AND;
+    case TK_ORAS: return OPR_OR;
+    default: return OPR_NOBINOPR;
+  }
+}
+
+
+static void dupifneeded (LexState* ls, expdesc* src, expdesc* dst) {
+int i = ls->fs->pc;
+Instruction inst = i>0? ls->fs->f->code[i -1] :0;
+int regdst, op = GET_OPCODE(inst);
+if (i>0 && op>=OP_GETTABUP  && op<=OP_GETFIELD) {
+  regdst = ls->fs->freereg; 
+luaK_reserveregs(ls->fs, 1);
+inst = SETARG_A(inst, regdst);
+luaK_code(ls->fs, inst);
+}
+}
+
+static void compoundassign (LexState *ls, struct LHS_assign *lh, int tk) {
+  expdesc e, r = lh->v;
+  BinOpr opr = getcompoundbinopr(tk);
+  check_condition(ls, vkisvar(lh->v.k), "syntax error");
+  check_readonly(ls, &lh->v);
+    checknext(ls, tk);
+enterlevel(ls);
+dupifneeded(ls, &lh->v, &r);
+  luaK_infix(ls->fs, opr, &r);
+    expr(ls, &e);
+    luaK_posfix(ls->fs, opr, &r, &e, ls->linenumber);
+leavelevel(ls);
+      luaK_storevar(ls->fs, &lh->v, &r);
+}
+
 
 static int cond (LexState *ls) {
   /* cond -> exp */
@@ -1799,6 +1848,10 @@ static void exprstat (LexState *ls) {
   if (ls->t.token == '=' || ls->t.token == ',') { /* stat -> assignment ? */
     v.prev = NULL;
     restassign(ls, &v, 1);
+  }
+  else if (ls->t.token >= TK_COMPOUND_FIRST && ls->t.token <= TK_COMPOUND_LAST) { /* stat -> compound assignment ? */
+    v.prev = NULL;
+    compoundassign(ls, &v, ls->t.token);
   }
   else {  /* stat -> func */
     Instruction *inst;
