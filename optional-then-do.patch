@@ -1,0 +1,31 @@
+diff --git a/src/lparser.c b/src/lparser.c
+index 1ac8299..9cd1048 100644
+--- a/src/lparser.c
++++ b/src/lparser.c
+@@ -1474,7 +1474,7 @@ static void whilestat (LexState *ls, int line) {
+   whileinit = luaK_getlabel(fs);
+   condexit = cond(ls);
+   enterblock(fs, &bl, 1);
+-  checknext(ls, TK_DO);
++  testnext(ls, TK_DO) || testnext(ls, TK_THEN);
+   block(ls);
+   luaK_jumpto(fs, whileinit);
+   check_match(ls, TK_END, TK_WHILE, line);
+@@ -1547,7 +1547,7 @@ static void forbody (LexState *ls, int base, int line, int nvars, int isgen) {
+   BlockCnt bl;
+   FuncState *fs = ls->fs;
+   int prep, endfor;
+-  checknext(ls, TK_DO);
++  testnext(ls, TK_DO) || testnext(ls, TK_THEN);
+   prep = luaK_codeABx(fs, forprep[isgen], base, 0);
+   enterblock(fs, &bl, 0);  /* scope for declared variables */
+   adjustlocalvars(ls, nvars);
+@@ -1642,7 +1642,7 @@ static void test_then_block (LexState *ls, int *escapelist) {
+   int jf;  /* instruction to skip 'then' code (if condition is false) */
+   luaX_next(ls);  /* skip IF or ELSEIF */
+   expr(ls, &v);  /* read condition */
+-  checknext(ls, TK_THEN);
++  testnext(ls, TK_THEN) ||   testnext(ls, TK_DO);
+   if (ls->t.token == TK_BREAK) {  /* 'if x then break' ? */
+     int line = ls->linenumber;
+     luaK_goiffalse(ls->fs, &v);  /* will jump if condition is true */
