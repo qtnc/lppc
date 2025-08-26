@@ -198,7 +198,7 @@ static void lsys_unloadlib (void *lib) {
 
 
 static void *lsys_load (lua_State *L, const char *path, int seeglb) {
-  HMODULE lib = LoadLibraryExA(path, NULL, LUA_LLE_FLAGS);
+  HMODULE lib = *path? LoadLibraryExA(path, NULL, LUA_LLE_FLAGS) : GetModuleHandle(NULL);
   (void)(seeglb);  /* not used: symbols are 'global' by default */
   if (lib == NULL) pusherror(L);
   return lib;
