@@ -391,6 +391,41 @@ static int os_setlocale (lua_State *L) {
 }
 
 
+static int os_localeconv (lua_State *L) {
+  struct lconv* lc = localeconv();
+  lua_createtable(L, 0, 20);
+#define S(N) lua_pushstring(L, lc->N); lua_setfield(L, -2, #N);
+#define I(N) lua_pushinteger(L, lc->N); lua_setfield(L, -2, #N);
+#define B(N) lua_pushboolean(L, lc->N); lua_setfield(L, -2, #N);
+S(decimal_point)
+S(thousands_sep)
+S(grouping)
+S(mon_decimal_point)
+S(mon_thousands_sep)
+S(mon_grouping)
+S(positive_sign)
+S(negative_sign)
+S(currency_symbol)
+I(frac_digits)
+B(p_cs_precedes)
+B(n_cs_precedes)
+I(p_sep_by_space)
+I(n_sep_by_space)
+I(p_sign_posn)
+I(n_sign_posn)
+S(int_curr_symbol)
+I(int_frac_digits)
+#undef S
+#undef I
+#undef B
+lua_pushinteger(L, lc->grouping? *lc->grouping : CHAR_MAX);
+lua_setfield(L, -2, "group_count");
+lua_pushinteger(L, lc->mon_grouping? *lc->mon_grouping : CHAR_MAX);
+lua_setfield(L, -2, "mon_group_count");
+  return 1;
+}
+
+
 static int os_exit (lua_State *L) {
   int status;
   if (lua_isboolean(L, 1))
@@ -416,6 +451,7 @@ static const luaL_Reg syslib[] = {
   {"setlocale", os_setlocale},
   {"time",      os_time},
   {"tmpname",   os_tmpname},
+  {"localeconv", os_localeconv},
   {NULL, NULL}
 };
 
