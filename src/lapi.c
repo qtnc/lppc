@@ -798,6 +798,22 @@ LUA_API int lua_getmetatable (lua_State *L, int objindex) {
   return res;
 }
 
+LUA_API int lua_gettypemetatable (lua_State *L, int type) {
+  const TValue *obj;
+  Table *mt;
+  int res = 0;
+  lua_lock(L);
+  mt = G(L)->mt[type];
+  if (mt != NULL) {
+    sethvalue2s(L, L->top.p, mt);
+    api_incr_top(L);
+    res = 1;
+  }
+  lua_unlock(L);
+  return res;
+}
+
+
 
 LUA_API int lua_getiuservalue (lua_State *L, int idx, int n) {
   TValue *o;
@@ -964,6 +980,22 @@ LUA_API int lua_setmetatable (lua_State *L, int objindex) {
       break;
     }
   }
+  L->top.p--;
+  lua_unlock(L);
+  return 1;
+}
+
+LUA_API int lua_settypemetatable (lua_State *L, int type) {
+  Table *mt;
+  lua_lock(L);
+  api_checknelems(L, 1);
+  if (ttisnil(s2v(L->top.p - 1)))
+    mt = NULL;
+  else {
+    api_check(L, ttistable(s2v(L->top.p - 1)), "table expected");
+    mt = hvalue(s2v(L->top.p - 1));
+  }
+  G(L)->mt[type] = mt;
   L->top.p--;
   lua_unlock(L);
   return 1;
