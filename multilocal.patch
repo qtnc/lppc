@@ -1164,85 +1164,91 @@ index 1031aad..0000000
 -       listfield(ls, cc);
 -       break;
 diff --git a/src/lparser.c b/src/lparser.c
-index 1ac8299..f39ba0f 100644
+index 1ac8299..a24ebdf 100644
 --- a/src/lparser.c
 +++ b/src/lparser.c
-@@ -952,9 +952,56 @@ static void constructor (LexState *ls, expdesc *t) {
- static void setvararg (FuncState *fs, int nparams) {
-   fs->f->is_vararg = 1;
-   luaK_codeABC(fs, OP_VARARGPREP, nparams, 0, 0);
-+  if (fs->pc>1) {
-+    Instruction inst = *(fs->f->code +fs->pc -1);
-+    memmove(fs->f->code+1, fs->f->code, sizeof(Instruction)* (fs->pc -1));
-+    *fs->f->code=inst;
-+  }
-+}
-+
-+static void pardefault (LexState* ls, int paridx, int regdelta) {
-+expdesc p, e;
-+int jf;
-+  init_exp(&p, VLOCAL, 0);
-+p.u.var.ridx = paridx;
-+luaK_code(ls->fs, CREATE_ABCk(OP_TEST, paridx, 0, 0, 1));
-+jf = luaK_code(ls->fs, CREATE_sJ(OP_JMP, OFFSET_sJ, 0));
-+ls->fs->freereg = regdelta;
-+expr(ls, &e);
-+      luaK_storevar(ls->fs, &p, &e);
-+ls->fs->freereg = 0;
-+SETARG_sJ(ls->fs->f->code[jf], ls->fs->pc -jf -1);
-+}
-+
-+static void patchpardefaults (FuncState* fs, int regdelta, int regstart) {
-+int x;
-+for (Instruction* inst = fs->f->code; inst<fs->f->code+fs->pc; inst++) {
-+#define OP(X) x = GETARG_##X(*inst); if (x>=regdelta) SETARG_##X(*inst, x-regdelta+regstart);
-+switch(GET_OPCODE(*inst)) {
-+case OP_GETTABLE: case OP_SETTABLE: case OP_SELF: case OP_ADD: case OP_SUB: case OP_MUL: case OP_DIV: case OP_IDIV: case OP_MOD: case OP_BAND: case OP_BOR: case OP_BXOR: case OP_SHR: case OP_SHL: case OP_POW:
-+OP(C) // fallthrough
-+case OP_MOVE: case OP_GETI: case OP_GETFIELD:
-+case OP_ADDI: case OP_ADDK: case OP_SUBK: case OP_MULK: case OP_DIVK: case OP_IDIVK: case OP_MODK: case OP_POWK: case OP_BANDK: case OP_BORK: case OP_BXORK: case OP_SHRI: case OP_SHLI:
-+case OP_MMBIN: case OP_UNM: case OP_NOT: case OP_BNOT: case OP_LEN:
-+case OP_EQ: case OP_LT: case OP_LE: case OP_TESTSET: 
-+OP(B) // fallthrough
-+case OP_LOADI: case OP_LOADF: case OP_LOADK: case OP_LOADKX: case OP_LOADFALSE: case OP_LFALSESKIP: case OP_LOADTRUE: case OP_LOADNIL: 
-+case OP_GETUPVAL: case OP_SETUPVAL: case OP_GETTABUP: case OP_SETTABUP: case OP_NEWTABLE: 
-+case OP_MMBINI: case OP_MMBINK: case OP_CONCAT: case OP_CLOSE: case OP_TBC: case OP_EQK: case OP_EQI: case OP_LTI: case OP_LEI: case OP_GTI: case OP_GEI: case OP_TEST: 
-+case OP_CALL: case OP_TAILCALL: case OP_RETURN: case OP_RETURN1: case OP_SETLIST:
-+OP(A)
-+break;
-+case OP_SETFIELD: case OP_SETI:
-+OP(A) OP(C)
-+break;
-+default:
-+break;
-+}
-+#undef OP
-+}
-+if (fs->f->maxstacksize>=regdelta) fs->f->maxstacksize-=regdelta;
+@@ -1008,11 +1008,15 @@ static void body (LexState *ls, expdesc *e, int ismethod, int line) {
  }
  
--
- static void parlist (LexState *ls) {
-   /* parlist -> [ {NAME ','} (NAME | '...') ] */
-   FuncState *fs = ls->fs;
-@@ -966,6 +1013,8 @@ static void parlist (LexState *ls) {
-       switch (ls->t.token) {
-         case TK_NAME: {
-           new_localvar(ls, str_checkname(ls));
-+  adjustlocalvars(ls, 1);
-+if (testnext(ls, '=')) pardefault(ls, nparams, 128);
-           nparams++;
-           break;
-         }
-@@ -978,7 +1027,7 @@ static void parlist (LexState *ls) {
+ 
+-static int explist (LexState *ls, expdesc *v) {
++static int explist (LexState *ls, expdesc *v, int* cont) {
+   /* explist -> expr { ',' expr } */
+   int n = 1;  /* at least one expression */
+   expr(ls, v);
+   while (testnext(ls, ',')) {
++    if (cont && ls->t.token==TK_NAME && luaX_lookahead(ls) == '=') {
++      *cont = 1;
++      break;
++    }
+     luaK_exp2nextreg(ls->fs, v);
+     expr(ls, v);
+     n++;
+@@ -1032,7 +1036,7 @@ static void funcargs (LexState *ls, expdesc *f) {
+       if (ls->t.token == ')')  /* arg list is empty? */
+         args.k = VVOID;
+       else {
+-        explist(ls, &args);
++        explist(ls, &args, NULL);
+         if (hasmultret(args.k))
+           luaK_setmultret(fs, &args);
        }
-     } while (!isvararg && testnext(ls, ','));
+@@ -1388,7 +1392,7 @@ static void restassign (LexState *ls, struct LHS_assign *lh, int nvars) {
+   else {  /* restassign -> '=' explist */
+     int nexps;
+     checknext(ls, '=');
+-    nexps = explist(ls, &e);
++    nexps = explist(ls, &e, NULL);
+     if (nexps != nvars)
+       adjust_assign(ls, nvars, nexps, &e);
+     else {
+@@ -1608,7 +1612,7 @@ static void forlist (LexState *ls, TString *indexname) {
    }
--  adjustlocalvars(ls, nparams);
-+  patchpardefaults(fs, 128, nparams);
-   f->numparams = cast_byte(fs->nactvar);
-   if (isvararg)
-     setvararg(fs, f->numparams);  /* declared vararg */
+   checknext(ls, TK_IN);
+   line = ls->linenumber;
+-  adjust_assign(ls, 4, explist(ls, &e), &e);
++  adjust_assign(ls, 4, explist(ls, &e, NULL), &e);
+   adjustlocalvars(ls, 4);  /* control variables */
+   marktobeclosed(fs);  /* last control var. must be closed */
+   luaK_checkstack(fs, 3);  /* extra space to call generator */
+@@ -1723,9 +1727,9 @@ static void checktoclose (FuncState *fs, int level) {
+ 
+ 
+ static void localstat (LexState *ls) {
+-  /* stat -> LOCAL NAME ATTRIB { ',' NAME ATTRIB } ['=' explist] */
++  begin: /* stat -> LOCAL NAME ATTRIB { ',' NAME ATTRIB } ['=' explist] */
+   FuncState *fs = ls->fs;
+-  int toclose = -1;  /* index of to-be-closed variable (if any) */
++  int toclose = -1, cont = 0;  /* index of to-be-closed variable (if any) */
+   Vardesc *var;  /* last variable */
+   int vidx, kind;  /* index and kind of last variable */
+   int nvars = 0;
+@@ -1743,7 +1747,7 @@ static void localstat (LexState *ls) {
+     nvars++;
+   } while (testnext(ls, ','));
+   if (testnext(ls, '='))
+-    nexps = explist(ls, &e);
++    nexps = explist(ls, &e, &cont);
+   else {
+     e.k = VVOID;
+     nexps = 0;
+@@ -1761,6 +1765,7 @@ static void localstat (LexState *ls) {
+     adjustlocalvars(ls, nvars);
+   }
+   checktoclose(fs, toclose);
++  if (cont) goto begin;
+ }
+ 
+ 
+@@ -1818,7 +1823,7 @@ static void retstat (LexState *ls) {
+   if (block_follow(ls, 1) || ls->t.token == ';')
+     nret = 0;  /* return no values */
+   else {
+-    nret = explist(ls, &e);  /* optional return values */
++    nret = explist(ls, &e, NULL);  /* optional return values */
+     if (hasmultret(e.k)) {
+       luaK_setmultret(fs, &e);
+       if (e.k == VCALL && nret == 1 && !fs->bl->insidetbc) {  /* tail call? */
 diff --git a/star-expand.patch b/star-expand.patch
 deleted file mode 100644
 index 3d01934..0000000
