@@ -1,0 +1,86 @@
+diff --git a/src/lparser.c b/src/lparser.c
+index 1ac8299..a24ebdf 100644
+--- a/src/lparser.c
++++ b/src/lparser.c
+@@ -1008,11 +1008,15 @@ static void body (LexState *ls, expdesc *e, int ismethod, int line) {
+ }
+ 
+ 
+-static int explist (LexState *ls, expdesc *v) {
++static int explist (LexState *ls, expdesc *v, int* cont) {
+   /* explist -> expr { ',' expr } */
+   int n = 1;  /* at least one expression */
+   expr(ls, v);
+   while (testnext(ls, ',')) {
++    if (cont && ls->t.token==TK_NAME && luaX_lookahead(ls) == '=') {
++      *cont = 1;
++      break;
++    }
+     luaK_exp2nextreg(ls->fs, v);
+     expr(ls, v);
+     n++;
+@@ -1032,7 +1036,7 @@ static void funcargs (LexState *ls, expdesc *f) {
+       if (ls->t.token == ')')  /* arg list is empty? */
+         args.k = VVOID;
+       else {
+-        explist(ls, &args);
++        explist(ls, &args, NULL);
+         if (hasmultret(args.k))
+           luaK_setmultret(fs, &args);
+       }
+@@ -1388,7 +1392,7 @@ static void restassign (LexState *ls, struct LHS_assign *lh, int nvars) {
+   else {  /* restassign -> '=' explist */
+     int nexps;
+     checknext(ls, '=');
+-    nexps = explist(ls, &e);
++    nexps = explist(ls, &e, NULL);
+     if (nexps != nvars)
+       adjust_assign(ls, nvars, nexps, &e);
+     else {
+@@ -1608,7 +1612,7 @@ static void forlist (LexState *ls, TString *indexname) {
+   }
+   checknext(ls, TK_IN);
+   line = ls->linenumber;
+-  adjust_assign(ls, 4, explist(ls, &e), &e);
++  adjust_assign(ls, 4, explist(ls, &e, NULL), &e);
+   adjustlocalvars(ls, 4);  /* control variables */
+   marktobeclosed(fs);  /* last control var. must be closed */
+   luaK_checkstack(fs, 3);  /* extra space to call generator */
+@@ -1723,9 +1727,9 @@ static void checktoclose (FuncState *fs, int level) {
+ 
+ 
+ static void localstat (LexState *ls) {
+-  /* stat -> LOCAL NAME ATTRIB { ',' NAME ATTRIB } ['=' explist] */
++  begin: /* stat -> LOCAL NAME ATTRIB { ',' NAME ATTRIB } ['=' explist] */
+   FuncState *fs = ls->fs;
+-  int toclose = -1;  /* index of to-be-closed variable (if any) */
++  int toclose = -1, cont = 0;  /* index of to-be-closed variable (if any) */
+   Vardesc *var;  /* last variable */
+   int vidx, kind;  /* index and kind of last variable */
+   int nvars = 0;
+@@ -1743,7 +1747,7 @@ static void localstat (LexState *ls) {
+     nvars++;
+   } while (testnext(ls, ','));
+   if (testnext(ls, '='))
+-    nexps = explist(ls, &e);
++    nexps = explist(ls, &e, &cont);
+   else {
+     e.k = VVOID;
+     nexps = 0;
+@@ -1761,6 +1765,7 @@ static void localstat (LexState *ls) {
+     adjustlocalvars(ls, nvars);
+   }
+   checktoclose(fs, toclose);
++  if (cont) goto begin;
+ }
+ 
+ 
+@@ -1818,7 +1823,7 @@ static void retstat (LexState *ls) {
+   if (block_follow(ls, 1) || ls->t.token == ';')
+     nret = 0;  /* return no values */
+   else {
+-    nret = explist(ls, &e);  /* optional return values */
++    nret = explist(ls, &e, NULL);  /* optional return values */
+     if (hasmultret(e.k)) {
+       luaK_setmultret(fs, &e);
+       if (e.k == VCALL && nret == 1 && !fs->bl->insidetbc) {  /* tail call? */

@@ -1163,86 +1163,270 @@ index 1031aad..0000000
 -     default: {
 -       listfield(ls, cc);
 -       break;
-diff --git a/src/lparser.c b/src/lparser.c
-index 1ac8299..f39ba0f 100644
---- a/src/lparser.c
-+++ b/src/lparser.c
-@@ -952,9 +952,56 @@ static void constructor (LexState *ls, expdesc *t) {
- static void setvararg (FuncState *fs, int nparams) {
-   fs->f->is_vararg = 1;
-   luaK_codeABC(fs, OP_VARARGPREP, nparams, 0, 0);
-+  if (fs->pc>1) {
-+    Instruction inst = *(fs->f->code +fs->pc -1);
-+    memmove(fs->f->code+1, fs->f->code, sizeof(Instruction)* (fs->pc -1));
-+    *fs->f->code=inst;
-+  }
+diff --git a/src/liolib.c b/src/liolib.c
+index c5075f3..35e1e78 100644
+--- a/src/liolib.c
++++ b/src/liolib.c
+@@ -481,10 +481,8 @@ static int read_number (lua_State *L, FILE *f) {
+   RN rn;
+   int count = 0;
+   int hex = 0;
+-  char decp[2];
++  char decp[2] = ".";
+   rn.f = f; rn.n = 0;
+-  decp[0] = lua_getlocaledecpoint();  /* get decimal point from locale */
+-  decp[1] = '.';  /* always accept a dot */
+   l_lockfile(rn.f);
+   do { rn.c = l_getc(rn.f); } while (isspace(rn.c));  /* skip spaces */
+   test2(&rn, "-+");  /* optional sign */
+diff --git a/src/lobject.c b/src/lobject.c
+index 9cfa522..abacca4 100644
+--- a/src/lobject.c
++++ b/src/lobject.c
+@@ -29,6 +29,12 @@
+ #include "lvm.h"
+ 
+ 
++LUAI_FUNC _locale_t lua_getclocale () {
++  static _locale_t c = NULL;
++  if (!c) c = _create_locale(LC_ALL, "C");
++  return c;
 +}
 +
-+static void pardefault (LexState* ls, int paridx, int regdelta) {
-+expdesc p, e;
-+int jf;
-+  init_exp(&p, VLOCAL, 0);
-+p.u.var.ridx = paridx;
-+luaK_code(ls->fs, CREATE_ABCk(OP_TEST, paridx, 0, 0, 1));
-+jf = luaK_code(ls->fs, CREATE_sJ(OP_JMP, OFFSET_sJ, 0));
-+ls->fs->freereg = regdelta;
-+expr(ls, &e);
-+      luaK_storevar(ls->fs, &p, &e);
-+ls->fs->freereg = 0;
-+SETARG_sJ(ls->fs->f->code[jf], ls->fs->pc -jf -1);
-+}
-+
-+static void patchpardefaults (FuncState* fs, int regdelta, int regstart) {
-+int x;
-+for (Instruction* inst = fs->f->code; inst<fs->f->code+fs->pc; inst++) {
-+#define OP(X) x = GETARG_##X(*inst); if (x>=regdelta) SETARG_##X(*inst, x-regdelta+regstart);
-+switch(GET_OPCODE(*inst)) {
-+case OP_GETTABLE: case OP_SETTABLE: case OP_SELF: case OP_ADD: case OP_SUB: case OP_MUL: case OP_DIV: case OP_IDIV: case OP_MOD: case OP_BAND: case OP_BOR: case OP_BXOR: case OP_SHR: case OP_SHL: case OP_POW:
-+OP(C) // fallthrough
-+case OP_MOVE: case OP_GETI: case OP_GETFIELD:
-+case OP_ADDI: case OP_ADDK: case OP_SUBK: case OP_MULK: case OP_DIVK: case OP_IDIVK: case OP_MODK: case OP_POWK: case OP_BANDK: case OP_BORK: case OP_BXORK: case OP_SHRI: case OP_SHLI:
-+case OP_MMBIN: case OP_UNM: case OP_NOT: case OP_BNOT: case OP_LEN:
-+case OP_EQ: case OP_LT: case OP_LE: case OP_TESTSET: 
-+OP(B) // fallthrough
-+case OP_LOADI: case OP_LOADF: case OP_LOADK: case OP_LOADKX: case OP_LOADFALSE: case OP_LFALSESKIP: case OP_LOADTRUE: case OP_LOADNIL: 
-+case OP_GETUPVAL: case OP_SETUPVAL: case OP_GETTABUP: case OP_SETTABUP: case OP_NEWTABLE: 
-+case OP_MMBINI: case OP_MMBINK: case OP_CONCAT: case OP_CLOSE: case OP_TBC: case OP_EQK: case OP_EQI: case OP_LTI: case OP_LEI: case OP_GTI: case OP_GEI: case OP_TEST: 
-+case OP_CALL: case OP_TAILCALL: case OP_RETURN: case OP_RETURN1: case OP_SETLIST:
-+OP(A)
-+break;
-+case OP_SETFIELD: case OP_SETI:
-+OP(A) OP(C)
-+break;
-+default:
-+break;
-+}
-+#undef OP
-+}
-+if (fs->f->maxstacksize>=regdelta) fs->f->maxstacksize-=regdelta;
+ /*
+ ** Computes ceil(log2(x))
+ */
+@@ -163,7 +169,6 @@ static int isneg (const char **s) {
+ ** C99 specification for 'strtod'
+ */
+ static lua_Number lua_strx2number (const char *s, char **endptr) {
+-  int dot = lua_getlocaledecpoint();
+   lua_Number r = l_mathop(0.0);  /* result (accumulator) */
+   int sigdig = 0;  /* number of significant digits */
+   int nosigdig = 0;  /* number of non-significant digits */
+@@ -176,7 +181,7 @@ static lua_Number lua_strx2number (const char *s, char **endptr) {
+   if (!(*s == '0' && (*(s + 1) == 'x' || *(s + 1) == 'X')))  /* check '0x' */
+     return l_mathop(0.0);  /* invalid format (no '0x') */
+   for (s += 2; ; s++) {  /* skip '0x' and read numeral */
+-    if (*s == dot) {
++    if (*s == '.') {
+       if (hasdot) break;  /* second dot? stop loop */
+       else hasdot = 1;
+     }
+@@ -249,24 +254,11 @@ static const char *l_str2dloc (const char *s, lua_Number *result, int mode) {
+ ** - '.' just optimizes the search for the common case (no special chars)
+ */
+ static const char *l_str2d (const char *s, lua_Number *result) {
+-  const char *endptr;
+   const char *pmode = strpbrk(s, ".xXnN");  /* look for special chars */
+   int mode = pmode ? ltolower(cast_uchar(*pmode)) : 0;
+   if (mode == 'n')  /* reject 'inf' and 'nan' */
+     return NULL;
+-  endptr = l_str2dloc(s, result, mode);  /* try to convert */
+-  if (endptr == NULL) {  /* failed? may be a different locale */
+-    char buff[L_MAXLENNUM + 1];
+-    const char *pdot = strchr(s, '.');
+-    if (pdot == NULL || strlen(s) > L_MAXLENNUM)
+-      return NULL;  /* string too long or no dot; fail */
+-    strcpy(buff, s);  /* copy string to buffer */
+-    buff[pdot - s] = lua_getlocaledecpoint();  /* correct decimal point */
+-    endptr = l_str2dloc(buff, result, mode);  /* try again */
+-    if (endptr != NULL)
+-      endptr = s + (endptr - buff);  /* make relative to 's' */
+-  }
+-  return endptr;
++  return l_str2dloc(s, result, mode);  /* try to convert */
  }
  
--
- static void parlist (LexState *ls) {
-   /* parlist -> [ {NAME ','} (NAME | '...') ] */
-   FuncState *fs = ls->fs;
-@@ -966,6 +1013,8 @@ static void parlist (LexState *ls) {
-       switch (ls->t.token) {
-         case TK_NAME: {
-           new_localvar(ls, str_checkname(ls));
-+  adjustlocalvars(ls, 1);
-+if (testnext(ls, '=')) pardefault(ls, nparams, 128);
-           nparams++;
-           break;
-         }
-@@ -978,7 +1027,7 @@ static void parlist (LexState *ls) {
-       }
-     } while (!isvararg && testnext(ls, ','));
+ 
+@@ -360,7 +352,7 @@ static int tostringbuff (TValue *obj, char *buff) {
+   else {
+     len = lua_number2str(buff, MAXNUMBER2STR, fltvalue(obj));
+     if (buff[strspn(buff, "-0123456789")] == '\0') {  /* looks like an int? */
+-      buff[len++] = lua_getlocaledecpoint();
++      buff[len++] = '.';
+       buff[len++] = '0';  /* adds '.0' to result */
+     }
    }
--  adjustlocalvars(ls, nparams);
-+  patchpardefaults(fs, 128, nparams);
-   f->numparams = cast_byte(fs->nactvar);
-   if (isvararg)
-     setvararg(fs, f->numparams);  /* declared vararg */
+diff --git a/src/loslib.c b/src/loslib.c
+index ba80d72..2c98d87 100644
+--- a/src/loslib.c
++++ b/src/loslib.c
+@@ -391,6 +391,41 @@ static int os_setlocale (lua_State *L) {
+ }
+ 
+ 
++static int os_localeconv (lua_State *L) {
++  struct lconv* lc = localeconv();
++  lua_createtable(L, 0, 20);
++#define S(N) lua_pushstring(L, lc->N); lua_setfield(L, -2, #N);
++#define I(N) lua_pushinteger(L, lc->N); lua_setfield(L, -2, #N);
++#define B(N) lua_pushboolean(L, lc->N); lua_setfield(L, -2, #N);
++S(decimal_point)
++S(thousands_sep)
++S(grouping)
++S(mon_decimal_point)
++S(mon_thousands_sep)
++S(mon_grouping)
++S(positive_sign)
++S(negative_sign)
++S(currency_symbol)
++I(frac_digits)
++B(p_cs_precedes)
++B(n_cs_precedes)
++I(p_sep_by_space)
++I(n_sep_by_space)
++I(p_sign_posn)
++I(n_sign_posn)
++S(int_curr_symbol)
++I(int_frac_digits)
++#undef S
++#undef I
++#undef B
++lua_pushinteger(L, lc->grouping? *lc->grouping : CHAR_MAX);
++lua_setfield(L, -2, "group_count");
++lua_pushinteger(L, lc->mon_grouping? *lc->mon_grouping : CHAR_MAX);
++lua_setfield(L, -2, "mon_group_count");
++  return 1;
++}
++
++
+ static int os_exit (lua_State *L) {
+   int status;
+   if (lua_isboolean(L, 1))
+@@ -416,6 +451,7 @@ static const luaL_Reg syslib[] = {
+   {"setlocale", os_setlocale},
+   {"time",      os_time},
+   {"tmpname",   os_tmpname},
++  {"localeconv", os_localeconv},
+   {NULL, NULL}
+ };
+ 
+diff --git a/src/lstrlib.c b/src/lstrlib.c
+index 0316716..9c79b49 100644
+--- a/src/lstrlib.c
++++ b/src/lstrlib.c
+@@ -51,6 +51,7 @@
+ 
+ 
+ 
++LUAI_FUNC _locale_t lua_getclocale ();
+ 
+ static int str_len (lua_State *L) {
+   size_t l;
+@@ -1041,7 +1042,7 @@ static int num2straux (char *buff, int sz, lua_Number x) {
+     m = adddigit(buff, n++, m * (1 << L_NBFD));  /* add first digit */
+     e -= L_NBFD;  /* this digit goes before the radix point */
+     if (m > 0) {  /* more digits? */
+-      buff[n++] = lua_getlocaledecpoint();  /* add radix point */
++      buff[n++] = '.';  /* add radix point */
+       do {  /* add as many digits as needed */
+         m = adddigit(buff, n++, m * 16);
+       } while (m > 0);
+@@ -1157,15 +1158,8 @@ static int quotefloat (lua_State *L, char *buff, lua_Number n) {
+   else if (n != n)  /* NaN? */
+     s = "(0/0)";
+   else {  /* format number as hexadecimal */
+-    int  nb = lua_number2strx(L, buff, MAX_ITEM,
++    return lua_number2strx(L, buff, MAX_ITEM,
+                                  "%" LUA_NUMBER_FRMLEN "a", n);
+-    /* ensures that 'buff' string uses a dot as the radix character */
+-    if (memchr(buff, '.', nb) == NULL) {  /* no dot? */
+-      char point = lua_getlocaledecpoint();  /* try locale point */
+-      char *ppoint = (char *)memchr(buff, point, nb);
+-      if (ppoint) *ppoint = '.';  /* change it to a dot */
+-    }
+-    return nb;
+   }
+   /* for the fixed representations */
+   return l_sprintf(buff, MAX_ITEM, "%s", s);
+diff --git a/src/luaconf.h b/src/luaconf.h
+index 33bb580..71c330a 100644
+--- a/src/luaconf.h
++++ b/src/luaconf.h
+@@ -418,7 +418,7 @@
+ #define l_floor(x)		(l_mathop(floor)(x))
+ 
+ #define lua_number2str(s,sz,n)  \
+-	l_sprintf((s), sz, LUA_NUMBER_FMT, (LUAI_UACNUMBER)(n))
++	_snprintf_l((s), sz, LUA_NUMBER_FMT, lua_getclocale(), (LUAI_UACNUMBER)(n))
+ 
+ /*
+ @@ lua_numbertointeger converts a float number with an integral value
+@@ -450,7 +450,7 @@
+ 
+ #define l_mathop(op)		op##f
+ 
+-#define lua_str2number(s,p)	strtof((s), (p))
++#define lua_str2number(s,p)	_strtof_l((s), (p), lua_getclocale())
+ 
+ 
+ #elif LUA_FLOAT_TYPE == LUA_FLOAT_LONGDOUBLE	/* }{ long double */
+@@ -466,7 +466,7 @@
+ 
+ #define l_mathop(op)		op##l
+ 
+-#define lua_str2number(s,p)	strtold((s), (p))
++#define lua_str2number(s,p)	_strtold_l((s), (p), lua_getclocale())
+ 
+ #elif LUA_FLOAT_TYPE == LUA_FLOAT_DOUBLE	/* }{ double */
+ 
+@@ -481,7 +481,7 @@
+ 
+ #define l_mathop(op)		op
+ 
+-#define lua_str2number(s,p)	strtod((s), (p))
++#define lua_str2number(s,p)	_strtod_l((s), (p), lua_getclocale())
+ 
+ #else						/* }{ */
+ 
+@@ -594,9 +594,9 @@
+ ** (All uses in Lua have only one format item.)
+ */
+ #if !defined(LUA_USE_C89)
+-#define l_sprintf(s,sz,f,i)	snprintf(s,sz,f,i)
++#define l_sprintf(s,sz,f,i)	_snprintf_l(s,sz,f,lua_getclocale(),i)
+ #else
+-#define l_sprintf(s,sz,f,i)	((void)(sz), sprintf(s,f,i))
++#define l_sprintf(s,sz,f,i)	((void)(sz), _sprintf_l(s,f,lua_getclocale(),i))
+ #endif
+ 
+ 
+@@ -626,7 +626,7 @@
+ */
+ #if !defined(LUA_USE_C89)
+ #define lua_number2strx(L,b,sz,f,n)  \
+-	((void)L, l_sprintf(b,sz,f,(LUAI_UACNUMBER)(n)))
++	((void)L, _snprintf_l(b,sz,f,lua_getclocale(),(LUAI_UACNUMBER)(n)))
+ #endif
+ 
+ 
+@@ -640,7 +640,7 @@
+ #undef l_mathop  /* variants not available */
+ #undef lua_str2number
+ #define l_mathop(op)		(lua_Number)op  /* no variant */
+-#define lua_str2number(s,p)	((lua_Number)strtod((s), (p)))
++#define lua_str2number(s,p)	((lua_Number)_strtod_l((s), (p), lua_getclocale()))
+ #endif
+ 
+ 
+@@ -662,16 +662,6 @@
+ #endif
+ 
+ 
+-/*
+-@@ lua_getlocaledecpoint gets the locale "radix character" (decimal point).
+-** Change that if you do not want to use C locales. (Code using this
+-** macro must include the header 'locale.h'.)
+-*/
+-#if !defined(lua_getlocaledecpoint)
+-#define lua_getlocaledecpoint()		(localeconv()->decimal_point[0])
+-#endif
+-
+-
+ /*
+ ** macros to improve jump prediction, used mostly for error handling
+ ** and debug facilities. (Some macros in the Lua API use these macros.
 diff --git a/star-expand.patch b/star-expand.patch
 deleted file mode 100644
 index 3d01934..0000000
