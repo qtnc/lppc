@@ -1850,6 +1850,8 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
         int n = GETARG_B(i);
         unsigned int last = GETARG_C(i);
         Table *h = hvalue(s2v(ra));
+        if (last == 0)
+          last = luaH_getn(h) + 1;
         if (n == 0)
           n = cast_int(L->top.p - ra) - 1;  /* get up to the top */
         else
@@ -1859,12 +1861,11 @@ void luaV_execute (lua_State *L, CallInfo *ci) {
           last += GETARG_Ax(*pc) * (MAXARG_C + 1);
           pc++;
         }
-        if (last > luaH_realasize(h))  /* needs more space? */
+        if (--last > luaH_realasize(h))  /* needs more space? */
           luaH_resizearray(L, h, last);  /* preallocate it at once */
         for (; n > 0; n--) {
           TValue *val = s2v(ra + n);
-          setobj2t(L, &h->array[last - 1], val);
-          last--;
+          setobj2t(L, &h->array[--last], val);
           luaC_barrierback(L, obj2gco(h), val);
         }
         vmbreak;
