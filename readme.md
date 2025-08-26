@@ -101,6 +101,49 @@ table.sort(t, <a,b> a>b)
 print(table.concat(t, ', ')) -- 5, 4, 3, 2, 1
 ```
 
+### Optional then/do after if/elseif/while/for
+Branch: optional-then-do
+
+Download [optional-then-do.patch](optional-then-do.patch) (3 files changed, 19 insertions(+), 9 deletions(-))
+
+This little patch makes the keywords **then** and **do** optional after **if**, **elseif**, **while** and **for**.
+
+```lua
+for i = 1, 10
+  print(i)
+end 
+```
+
+As a statement almost never starts with `(`, `[` or `{`, it normally doesn't cause any problem. However, if it exceptionally does, then it can be misinterpreted as a function call, table access or call with single table argument. In case of doubt, you should use **then** and **do** keywords to make sure the code is interpreted as desired.
+
+### Multiple local variables declaration
+Branch: multilocal
+
+Download [multilocal.patch](multilocal.patch) (3 files changed, 19 insertions(+), 9 deletions(-))
+
+The lua syntax for declaring and initializing several local variables at once has always bugged me:
+
+```lua
+local a, b, c = 1, 2, 3
+```
+
+It is so by simplicity, and by analogy with multiple assignment syntax. However, it isn't very very readable. Of course you can always have separate local declarations:
+
+```lua
+local a = 1
+local b = 2
+local c = 3
+```
+
+However, it can be annoying to repeat multiple times the keyword **local**. 
+
+This patch allows the following, arguably more conventional syntax, which is interpreted as it was separate statements.
+
+```lua
+local a = 1, b = 2, c = 3
+```
+
+
 ## Table extraction in local variables
 Branch: table-extract
 
@@ -148,7 +191,7 @@ mybank:deposit(1000)
 print(mybank.balance) -- 1000
 ```
 
-### Better numbers
+### Binary number literals and thousand separator 
 Branch: better-numbers
 
 Download [better-numbers.patch](better-numbers.patch) (2 files changed, 15 insertions(+), 4 deletions(-))
@@ -165,7 +208,7 @@ local b = 1_234_567
 print(a+b) 1234575
 ```
 
-### Better strings
+### A few string additions
 Branch: better-strings
 
 Download [better-strings.patch](better-strings.patch) (2 files changed, 10 insertions(+), 5 deletions(-))
@@ -238,7 +281,7 @@ end
 ```
 
 - You can set, or not, a default value for all parameters independently, i.e. setting a default value for parameter N doesn't oblige you to set a default value for parameter N+1, N+2 and so on, as it's the case for example inC++.
-- You can use whatever expression you want in the default value, including function call, table construction, or use previous parameters
+- You can use whatever expression you want in the default value, including function call, table construction, upvalues, or use previous parameters
 - Be careful that the standard or operator is used, so a default value will overwrite a nil, but also a false value passed explicitely
 
 ### Stared expand in table constructor
@@ -292,4 +335,48 @@ print(table.unpack{ foo(1); foo(10) }) -- 1, 2, 3, 10, 11, 12
 
 Same limitations as above.
 
+### Stop implicit locale formatting
+Branch: better-locale
+
+Download [better-locale.patch](better-locale.patch) (3 files changed, 19 insertions(+), 9 deletions(-))
+
+It's sometimes indesirable that numbers are implicitly formatted taking locale into account, both with print and with string.format.
+This patch makes print and string.format always use the C locale, making them independant from locale, and so, formatting is always consistent.
+
+This patch also adds a function os.localeconv(). It returns a table with the content of [C struct lconv](https://en.cppreference.com/w/c/locale/lconv).
+
+### Load C modules from lua executable / statically linked lua C modules
+Branch: loadlib-self
+
+Download [loadlib-self.patch](loadlib-self.patch) (3 files changed, 19 insertions(+), 9 deletions(-))
+
+Adds the possibility to load lua C functions from own lua executable, by passing an empty string as the first argument of package.loadlib.
+For example, this allows to statically link with lua modules, using a loader like the following:
+
+```lua
+table.insert(package.searchers, 3, function (modname)
+local funcname = 'luaopen_' .. modname
+  local func = package.loadlib('', funcname)
+  if func then
+    return func, funcname
+  else
+    return string.format('No exported function %s in lua executable', funcname)
+  end
+end)
+```
+
+In C, you can add this exported function, directly in lua.c, inside your own code hosting lua, or static link with it:
+
+```c
+int __declspec(dllexport) luaopen_mylib (lua_State* L) {
+  lua_pushstring(L, "It works!");
+  return 1;
+}
+```
+
+And then, you can use require as usual:
+
+```lua
+local mylib = require('mylib')
+print(mylib) -- It works!
 ```
