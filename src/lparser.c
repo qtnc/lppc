@@ -855,14 +855,31 @@ static void recfield (LexState *ls, ConsControl *cc) {
     yindex(ls, &key);
   checklimit(fs, cc->nh, MAX_INT, "items in a constructor");
   cc->nh++;
+  tab = *cc->t;
+  luaK_indexed(fs, &tab, &key);
+    if (testnext(ls, '=')) expr(ls, &val);
+  else init_exp(&val, VTRUE, 0);
+  luaK_storevar(fs, &tab, &val);
+  fs->freereg = reg;  /* free registers */
+}
+
+static void shortrecfield (LexState *ls, ConsControl *cc) {
+  /* shortrecfield -> = exp */
+  FuncState *fs = ls->fs;
+  int reg = ls->fs->freereg;
+  expdesc tab, key, val;
   checknext(ls, '=');
+  check(ls, TK_NAME);
+  ls->lookahead = ls->t;
+    checklimit(fs, cc->nh, MAX_INT, "items in a constructor");
+    codename(ls, &key);
+  cc->nh++;
   tab = *cc->t;
   luaK_indexed(fs, &tab, &key);
   expr(ls, &val);
   luaK_storevar(fs, &tab, &val);
   fs->freereg = reg;  /* free registers */
 }
-
 
 static void closelistfield (FuncState *fs, ConsControl *cc) {
   if (cc->v.k == VVOID) return;  /* there is no list item */
@@ -909,8 +926,14 @@ static void field (LexState *ls, ConsControl *cc) {
         recfield(ls, cc);
       break;
     }
+    case '.':
+      luaX_next(ls); // fallthrough
     case '[': {
       recfield(ls, cc);
+      break;
+    }
+    case '=': {
+      shortrecfield(ls, cc);
       break;
     }
     default: {
