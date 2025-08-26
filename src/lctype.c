@@ -17,6 +17,7 @@
 #include <limits.h>
 
 
+#define LUA_UCID 1
 #if defined (LUA_UCID)		/* accept UniCode IDentifiers? */
 /* consider all non-ascii codepoints to be alphabetic */
 #define NONA		0x01
