@@ -1812,6 +1812,7 @@ void luaK_setlist (FuncState *fs, int base, int nelems, int tostore) {
   lua_assert(tostore != 0 && tostore <= LFIELDS_PER_FLUSH);
   if (tostore == LUA_MULTRET)
     tostore = 0;
+    nelems++;
   if (nelems <= MAXARG_C)
     luaK_codeABC(fs, OP_SETLIST, base, tostore, nelems);
   else {

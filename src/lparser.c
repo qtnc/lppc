@@ -841,6 +841,7 @@ typedef struct ConsControl {
   int nh;  /* total number of 'record' elements */
   int na;  /* number of array elements already stored */
   int tostore;  /* number of array elements pending to be stored */
+  int naundef; /* non-zero if exact number of elements not known */
 } ConsControl;
 
 
@@ -869,7 +870,7 @@ static void closelistfield (FuncState *fs, ConsControl *cc) {
   luaK_exp2nextreg(fs, &cc->v);
   cc->v.k = VVOID;
   if (cc->tostore == LFIELDS_PER_FLUSH) {
-    luaK_setlist(fs, cc->t->u.info, cc->na, cc->tostore);  /* flush */
+    luaK_setlist(fs, cc->t->u.info, cc->naundef? LUA_MULTRET  : cc->na, cc->tostore);  /* flush */
     cc->na += cc->tostore;
     cc->tostore = 0;  /* no more items pending */
   }
@@ -880,15 +881,16 @@ static void lastlistfield (FuncState *fs, ConsControl *cc) {
   if (cc->tostore == 0) return;
   if (hasmultret(cc->v.k)) {
     luaK_setmultret(fs, &cc->v);
-    luaK_setlist(fs, cc->t->u.info, cc->na, LUA_MULTRET);
+    luaK_setlist(fs, cc->t->u.info, cc->naundef? LUA_MULTRET : cc->na, LUA_MULTRET);
     cc->na--;  /* do not count last expression (unknown number of elements) */
   }
   else {
     if (cc->v.k != VVOID)
       luaK_exp2nextreg(fs, &cc->v);
-    luaK_setlist(fs, cc->t->u.info, cc->na, cc->tostore);
+    luaK_setlist(fs, cc->t->u.info, cc->naundef? LUA_MULTRET : cc->na, cc->tostore);
   }
   cc->na += cc->tostore;
+  cc->tostore = 0;
 }
 
 
@@ -927,9 +929,10 @@ static void constructor (LexState *ls, expdesc *t) {
   FuncState *fs = ls->fs;
   int line = ls->linenumber;
   int pc = luaK_codeABC(fs, OP_NEWTABLE, 0, 0, 0);
+int doflush = 0;
   ConsControl cc;
   luaK_code(fs, 0);  /* space for extra arg. */
-  cc.na = cc.nh = cc.tostore = 0;
+  cc.na = cc.nh = cc.tostore = cc.naundef = 0;
   cc.t = t;
   init_exp(t, VNONRELOC, fs->freereg);  /* table will be at stack top */
   luaK_reserveregs(fs, 1);
@@ -938,9 +941,14 @@ static void constructor (LexState *ls, expdesc *t) {
   do {
     lua_assert(cc.v.k == VVOID || cc.tostore > 0);
     if (ls->t.token == '}') break;
-    closelistfield(fs, &cc);
+    if (doflush && cc.tostore>0 && hasmultret(cc.v.k)) {
+      lastlistfield(fs, &cc);
+      cc.naundef=1;
+    }
+    else closelistfield(fs, &cc);
+    doflush = 0;
     field(ls, &cc);
-  } while (testnext(ls, ',') || testnext(ls, ';'));
+  } while (testnext(ls, ',') || (doflush = testnext(ls, ';')) );
   check_match(ls, '}', '{', line);
   lastlistfield(fs, &cc);
   luaK_settablesize(fs, pc, t->u.info, cc.na, cc.nh);
