@@ -235,11 +235,11 @@ static int read_numeral (LexState *ls, SemInfo *seminfo) {
   for (;;) {
     if (check_next2(ls, expo))  /* exponent mark? */
       check_next2(ls, "-+");  /* optional exponent sign */
-    else if (lisxdigit(ls->current) || ls->current == '.')  /* '%x|%.' */
+    else if (lisxdigit(ls->current) || ls->current == '.' || ls->current == '_')  /* '%x|%.' */
       save_and_next(ls);
     else break;
   }
-  if (lislalpha(ls->current))  /* is numeral touching a letter? */
+  if (lislalpha(ls->current) && ls->current != '_')  /* is numeral touching a letter? */
     save_and_next(ls);  /* force an error */
   save(ls, '\0');
   if (luaO_str2num(luaZ_buffer(ls->buff), &obj) == 0)  /* format error? */
