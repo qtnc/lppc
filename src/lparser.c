@@ -1721,6 +1721,26 @@ static void checktoclose (FuncState *fs, int level) {
   }
 }
 
+static void extractlocal (LexState* ls, int nvars) {
+FuncState* fs = ls->fs;
+expdesc e, v;
+  Vardesc *var;
+int firstvar = fs->nactvar;
+      luaK_nil(fs, fs->freereg, nvars);
+    adjustlocalvars(ls, nvars);
+  luaK_checkstack(fs, 1);
+fs->freereg += nvars;
+expr(ls, &e);
+fs->freereg -= nvars;
+init_exp(&v, VLOCAL, firstvar + nvars);
+luaK_storevar(fs, &v, &e);
+for (int i=0; i<nvars; i++) {
+  var = getlocalvardesc(fs, firstvar+i);
+codestring(&e, var->vd.name);
+luaK_exp2K(fs, &e);
+luaK_codeABC(fs, OP_GETFIELD, var->vd.ridx, firstvar + nvars, e.u.info);
+}
+}
 
 static void localstat (LexState *ls) {
   /* stat -> LOCAL NAME ATTRIB { ',' NAME ATTRIB } ['=' explist] */
@@ -1744,6 +1764,10 @@ static void localstat (LexState *ls) {
   } while (testnext(ls, ','));
   if (testnext(ls, '='))
     nexps = explist(ls, &e);
+  else if (testnext(ls, TK_IN)) {
+extractlocal(ls, nvars);
+return;
+  }
   else {
     e.k = VVOID;
     nexps = 0;
