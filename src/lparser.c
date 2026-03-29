@@ -959,7 +959,7 @@ static void shortrecfield (LexState *ls, ConsControl *cc) {
   checknext(ls, '=');
   check(ls, TK_NAME);
   ls->lookahead = ls->t;
-    checklimit(fs, cc->nh, MAX_INT, "items in a constructor");
+    luaY_checklimit(fs, cc->nh, MAX_CNST, "items in a constructor");
     codename(ls, &key);
   cc->nh++;
   tab = *cc->t;
