@@ -8,15 +8,20 @@ A power patch usually changes core language features otherwise impossible to do 
 
 ## How to apply a patch ?
 
-1. Download lua from [lua.org](http://lua.org/) or just clone this repository which just holds a copy of the latest compatible version (to this date 5.4.8)
+1. Download lua from [lua.org](http://lua.org/) or just clone this repository which just holds a copy of the latest compatible version (to this date 5.5.0)
 2. git merge the branch of the patch you want, or download the patch file and run `git apply file.patch`. Most of the patches can be combined with each other, but you will need to handle conflicts yourself.
 3. Build lua as normal, by following [original build instructions](doc/readme.html).
+
+Note: you can also take the tag corresponding to older lua versions. The following tags exists:
+
+- v5.4.8
 
 
 ## AVailable patchs in this collection
 
 ### Compound operators
-Branch: compound-operators
+Branch: compound-operators  
+Compatible with: lua 5.5.0
 
 Download [compound-operators.patch](compound-operators.patch) (3 files changed, 122 insertions(+), 7 deletions(-))
 
@@ -40,7 +45,8 @@ print(t.u.v) -- 500
 ```
 
 ### Lambdas
-Branch: lambdas
+Branch: lambdas  
+Compatible with: lua 5.5.0
 
 Download [lambdas.patch](lambdas.patch) (3 files changed, 75 insertions(+), 12 deletions(-))
 
@@ -68,7 +74,8 @@ printcall( (a, b) => (b, a), 'one', 'two') -- two one
 ```
 
 ### Lambdas-ruby
-Branch: lambdas-ruby
+Branch: lambdas-ruby  
+Compatible with: lua 5.5.0
 
 Download [lambdas-ruby.patch](lambdas-ruby.patch) (1 file changed, 30 insertions(+), 3 deletions(-))
 
@@ -85,7 +92,8 @@ print(table.concat(t, ', ')) -- 5, 4, 3, 2, 1
 ```
 
 ### Lambdas-ltgt
-Branch: lambdas-ltgt
+Branch: lambdas-ltgt  
+Compatible with: lua 5.5.0
 
 Download [lambdas-ltgt.patch](lambdas-ltgt.patch) (1 file changed, 30 insertions(+), 3 deletions(-))
 
@@ -102,7 +110,8 @@ print(table.concat(t, ', ')) -- 5, 4, 3, 2, 1
 ```
 
 ### Optional then/do after if/elseif/while/for
-Branch: optional-then-do
+Branch: optional-then-do  
+Compatible with: lua 5.5.0
 
 Download [optional-then-do.patch](optional-then-do.patch) (1 file changed, 3 insertions(+), 3 deletions(-))
 
@@ -117,7 +126,8 @@ end
 As a statement almost never starts with `(`, `[` or `{`, it normally doesn't cause any problem. However, if it exceptionally does, then it can be misinterpreted as a function call, table access or call with single table argument. In case of doubt, you should use **then** and **do** keywords to make sure the code is interpreted as desired.
 
 ### Multiple local variables declaration
-Branch: multilocal
+Branch: multilocal  
+Compatible with: lua 5.5.0
 
 Download [multilocal.patch](multilocal.patch) (1 file changed, 13 insertions(+), 8 deletions(-))
 
@@ -145,7 +155,8 @@ local a = 1, b = 2, c = 3
 
 
 ## Table extraction in local variables
-Branch: table-extract
+Branch: table-extract  
+Compatible with: lua 5.5.0
 
 Download [table-extract.patch](table-extract.patch) (2 files changed, 25 insertions(+), 1 deletion(-))
 
@@ -160,7 +171,8 @@ print(log(64, 2), floor(17.25), cos(0)) -- 6.0 17 1.0
 ```
 
 ### Syntax suggar for defining methods in tables
-Branch: methods-in-tables
+Branch: methods-in-tables  
+Compatible with: lua 5.5.0
 
 Download [methods-in-tables.patch](methods-in-tables.patch) (1 file changed, 31 insertions(+), 3 deletions(-))
 
@@ -192,7 +204,8 @@ print(mybank.balance) -- 1000
 ```
 
 ### Binary number literals and thousand separator 
-Branch: better-numbers
+Branch: better-numbers  
+Compatible with: lua 5.5.0
 
 Download [better-numbers.patch](better-numbers.patch) (2 files changed, 15 insertions(+), 4 deletions(-))
 
@@ -209,7 +222,8 @@ print(a+b) 1234575
 ```
 
 ### A few string additions
-Branch: better-strings
+Branch: better-strings  
+Compatible with: lua 5.5.0
 
 Download [better-strings.patch](better-strings.patch) (2 files changed, 10 insertions(+), 5 deletions(-))
 
@@ -221,7 +235,8 @@ This very small patch adds some string improvements:
 - Added `\\` followed by a newline to ignore it
 
 ### Default type metatable
-Branch: default-type-mt
+Branch: default-type-mt  
+Compatible with: lua 5.5.0
 
 Download [default-type-mt.patch](default-type-mt.patch) (3 files changed, 52 insertions(+), 1 deletion(-))
 
@@ -247,7 +262,8 @@ print(t:concat(';')) -- 1;2;3;4;5
 ```
 
 ### Shorter table items
-Branch: shorter-table-items
+Branch: shorter-table-items  
+Compatible with: lua 5.5.0
 
 Download [shorter-table-items.patch](shorter-table-items.patch) (1 file changed, 24 insertions(+), 1 deletion(-))
 
@@ -258,7 +274,8 @@ This patch adds a few goodies in table construction:
 - `{ .x }` is a shortcut for `{ x=true }`, and `{ .x=value }` is also accepted as equivalent to `{ x=value }` 
 
 ### Default values for function parameters
-Branch: default-params
+Branch: default-params  
+Compatible with: lua 5.5.0
 
 Download [default-params.patch](default-params.patch) (1 file changed, 51 insertions(+), 2 deletions(-))
 
@@ -285,7 +302,8 @@ end
 - Be careful that the standard or operator is used, so a default value will overwrite a nil, but also a false value passed explicitely
 
 ### Stared expand in table constructor
-Branch: star-expand
+Branch: star-expand  
+Compatible with: lua 5.4.8
 
 Download [star-expand.patch](star-expand.patch) (3 files changed, 19 insertions(+), 9 deletions(-))
 
@@ -318,7 +336,8 @@ a, b, c, d = table.unpack{ *foo(10), 13 } -- OK
 The two later are impossible, or they would require a lot of changes in the bytecode and/or the VM.
 
 ### Multiple expand in table constructor
-Branch: semicolon-expand
+Branch: semicolon-expand  
+Compatible with: lua 5.4.8
 
 Download [semicolon-expand.patch](semicolon-expand.patch) (3 files changed, 19 insertions(+), 9 deletions(-))
 
@@ -336,7 +355,8 @@ print(table.unpack{ foo(1); foo(10) }) -- 1, 2, 3, 10, 11, 12
 Same limitations as above.
 
 ### Stop implicit locale formatting
-Branch: better-locale
+Branch: better-locale  
+Compatible with: lua 5.4.8
 
 Download [better-locale.patch](better-locale.patch) (5 files changed, 57 insertions(+), 47 deletions(-))
 
@@ -346,7 +366,8 @@ This patch makes print and string.format always use the C locale, making them in
 This patch also adds a function os.localeconv(). It returns a table with the content of [C struct lconv](https://en.cppreference.com/w/c/locale/lconv).
 
 ### Load C modules from lua executable / statically linked lua C modules
-Branch: loadlib-self
+Branch: loadlib-self  
+Compatible with: lua 5.4.8
 
 Download [loadlib-self.patch](loadlib-self.patch) (1 file changed, 2 insertions(+), 2 deletions(-))
 
